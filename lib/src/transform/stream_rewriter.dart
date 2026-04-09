@@ -6,7 +6,6 @@ import '../binary/flac_parser.dart';
 import '../binary/flac_serializer.dart';
 import '../edit/flac_metadata_editor.dart';
 import '../edit/mutation_ops.dart';
-import '../error/exceptions.dart';
 import 'flac_transform_options.dart';
 
 /// Rewrites FLAC metadata in a single pass over a byte stream.
@@ -54,20 +53,7 @@ class StreamRewriter {
       audioStartOffset = _findAudioOffset(accumulated) ?? accumulated.length;
     }
 
-    // Parse ONLY the metadata portion.
-    final metadataBytes =
-        Uint8List.sublistView(accumulated, 0, audioStartOffset);
-
-    // Validate fLaC magic bytes.
-    if (metadataBytes.length < 4 ||
-        metadataBytes[0] != flacMagicByte0 ||
-        metadataBytes[1] != flacMagicByte1 ||
-        metadataBytes[2] != flacMagicByte2 ||
-        metadataBytes[3] != flacMagicByte3) {
-      throw InvalidFlacException('Invalid FLAC marker');
-    }
-
-    // Parse the metadata region.
+    // Parse the metadata region (FlacParser validates the fLaC marker).
     final doc = FlacParser.parseBytes(accumulated);
 
     // Apply mutations.
