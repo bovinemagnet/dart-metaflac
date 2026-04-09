@@ -43,5 +43,7 @@ export 'src/api/document_api.dart';
 export 'src/api/transform_api.dart';
 
 // IO
+export 'src/io/atomic_writer.dart';
 export 'src/io/flac_file_editor.dart';
 export 'src/io/flac_write_options.dart';
+export 'src/io/modtime.dart';
