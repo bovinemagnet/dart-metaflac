@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:args/args.dart';
+import 'package:args/command_runner.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/src/cli/command_runner.dart';
 
 // ─── Exit codes ───────────────────────────────────────────────────────────────
 const _exitSuccess = 0;
@@ -11,6 +13,20 @@ const _exitInvalidFlac = 3;
 const _exitIoError = 4;
 
 Future<void> main(List<String> args) async {
+  // Route to subcommand runner if the first argument is a known subcommand.
+  const subcommands = {'inspect', 'blocks', 'tags', 'picture', 'padding'};
+  if (args.isNotEmpty && subcommands.contains(args.first)) {
+    final runner = MetaflacCommandRunner();
+    try {
+      final exitCode = await runner.run(args) ?? 0;
+      exit(exitCode);
+    } on UsageException catch (e) {
+      stderr.writeln(e.message);
+      stderr.writeln(e.usage);
+      exit(_exitInvalidArgs);
+    }
+  }
+
   final parser = ArgParser()
     ..addFlag('list', help: 'List all metadata blocks')
     ..addFlag('show-md5', help: 'Show MD5 from STREAMINFO')

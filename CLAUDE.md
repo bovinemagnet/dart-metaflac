@@ -37,12 +37,19 @@ This is a pure Dart FLAC metadata library with **no `dart:io` dependency** in th
 
 ### CLI (`bin/metaflac.dart`)
 
-Aims for compatibility with the native `metaflac` command. Supports `--list`, `--show-md5`, `--set-tag`, `--remove-tag`, `--export-tags-to`, `--import-tags-from`, `--export-picture-to`, `--import-picture-from`, `--json`, `--dry-run`, `--continue-on-error`, `--quiet`/`-q`. Exit codes: 0 (success), 1 (general error), 2 (invalid args), 3 (invalid FLAC), 4 (I/O error).
+Supports both modern subcommand style and `metaflac`-compatible `--flag` aliases. The CLI detects whether the first argument is a subcommand or a flag and routes accordingly.
+
+**Modern subcommands:** `inspect`, `blocks list`, `tags list/set/add/remove/clear/import/export`, `picture add/remove/export`, `padding set/remove`.
+
+**Compatibility flags:** `--list`, `--show-md5`, `--set-tag`, `--remove-tag`, `--export-tags-to`, `--import-tags-from`, `--export-picture-to`, `--import-picture-from`.
+
+**Global options:** `--json`, `--dry-run`, `--continue-on-error`, `--quiet`/`-q`, `--preserve-modtime`, `--with-filename`. Exit codes: 0 (success), 1 (general error), 2 (invalid args), 3 (invalid FLAC), 4 (I/O error).
+
+**CLI internals** live in `lib/src/cli/`: `BaseFlacCommand` (shared options), `MetaflacCommandRunner`, `formatters.dart` (output helpers), and command files in `commands/`.
 
 ### Planned but Not Yet Implemented
 
 - `dart_metaflac_cli` as a separate package
-- Modern subcommand CLI style (e.g. `metaflac tags set`)
 - DartDoc comments and pub.dev documentation
 
 ## Design Documentation
