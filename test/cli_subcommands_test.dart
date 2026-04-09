@@ -507,4 +507,140 @@ void main() {
       expect(out, contains('ARTIST=Someone'));
     });
   });
+
+  group('picture add', () {
+    test('adds a picture from an image file', () async {
+      final flac = buildFlac();
+      writeFlac('test.flac', flac);
+
+      // Write a minimal PNG file (magic bytes).
+      final pngBytes = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+      File(tmpFile('cover.png')).writeAsBytesSync(pngBytes);
+
+      final result = await runMetaflac([
+        'picture', 'add',
+        '--file=${tmpFile('cover.png')}',
+        tmpFile('test.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+
+      // Verify picture exists by inspecting with JSON.
+      final verify =
+          await runMetaflac(['inspect', '--json', tmpFile('test.flac')]);
+      final json =
+          jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      expect(json, contains('pictures'));
+      final pics = json['pictures'] as List;
+      expect(pics, isNotEmpty);
+      expect(pics.first['mimeType'], equals('image/png'));
+    });
+  });
+
+  group('picture remove', () {
+    test('--all removes all pictures', () async {
+      final picData = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47]);
+      final flac = buildFlac(
+        pictures: [
+          PictureBlock(
+            pictureType: PictureType.frontCover,
+            mimeType: 'image/png',
+            description: '',
+            width: 0,
+            height: 0,
+            colorDepth: 0,
+            indexedColors: 0,
+            data: picData,
+          ),
+        ],
+      );
+      writeFlac('test.flac', flac);
+
+      final result = await runMetaflac(
+          ['picture', 'remove', '--all', tmpFile('test.flac')]);
+      expect(result.exitCode, equals(0));
+
+      // Verify no pictures remain.
+      final verify =
+          await runMetaflac(['inspect', '--json', tmpFile('test.flac')]);
+      final json =
+          jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      expect(json.containsKey('pictures'), isFalse);
+    });
+  });
+
+  group('picture export', () {
+    test('exports picture data to file', () async {
+      final picData =
+          Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+      final flac = buildFlac(
+        pictures: [
+          PictureBlock(
+            pictureType: PictureType.frontCover,
+            mimeType: 'image/png',
+            description: '',
+            width: 0,
+            height: 0,
+            colorDepth: 0,
+            indexedColors: 0,
+            data: picData,
+          ),
+        ],
+      );
+      writeFlac('test.flac', flac);
+
+      final outPath = tmpFile('exported.png');
+      final result = await runMetaflac([
+        'picture', 'export',
+        '--output=$outPath',
+        tmpFile('test.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+
+      final exported = File(outPath).readAsBytesSync();
+      expect(exported, equals(picData));
+    });
+  });
+
+  group('padding set', () {
+    test('sets padding to a specific size', () async {
+      final flac = buildFlac(paddingSize: 512);
+      writeFlac('test.flac', flac);
+
+      final result = await runMetaflac(
+          ['padding', 'set', tmpFile('test.flac'), '4096']);
+      expect(result.exitCode, equals(0));
+
+      // Verify padding block size.
+      final verify = await runMetaflac(
+          ['blocks', 'list', '--json', tmpFile('test.flac')]);
+      final json =
+          jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      final blocks = json['blocks'] as List;
+      final paddingBlocks =
+          blocks.where((b) => b['type'] == 'padding').toList();
+      expect(paddingBlocks, isNotEmpty);
+      expect(paddingBlocks.first['payloadSize'], equals(4096));
+    });
+  });
+
+  group('padding remove', () {
+    test('removes all padding', () async {
+      final flac = buildFlac(paddingSize: 1024);
+      writeFlac('test.flac', flac);
+
+      final result =
+          await runMetaflac(['padding', 'remove', tmpFile('test.flac')]);
+      expect(result.exitCode, equals(0));
+
+      // Verify no padding blocks remain.
+      final verify = await runMetaflac(
+          ['blocks', 'list', '--json', tmpFile('test.flac')]);
+      final json =
+          jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      final blocks = json['blocks'] as List;
+      final paddingBlocks =
+          blocks.where((b) => b['type'] == 'padding').toList();
+      expect(paddingBlocks, isEmpty);
+    });
+  });
 }
