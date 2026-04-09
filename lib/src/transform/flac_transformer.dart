@@ -8,6 +8,7 @@ import '../model/flac_metadata_document.dart';
 import 'flac_transform_options.dart';
 import 'flac_transform_plan.dart';
 import 'flac_transform_result.dart';
+import 'stream_rewriter.dart';
 
 class FlacTransformer {
   FlacTransformer._fromBytes(this._bytes) : _stream = null;
@@ -64,5 +65,24 @@ class FlacTransformer {
     );
 
     return FlacTransformResult(document: updated, bytes: outBytes, plan: plan);
+  }
+
+  /// Transforms FLAC metadata via streaming.
+  ///
+  /// Unlike [transform], this method streams audio data through without
+  /// buffering the entire file in memory. Returns a stream of the
+  /// transformed FLAC file.
+  Future<Stream<List<int>>> transformStream({
+    required List<MetadataMutation> mutations,
+    FlacTransformOptions options = FlacTransformOptions.defaults,
+  }) async {
+    final inputStream = _bytes != null
+        ? Stream.fromIterable([_bytes!.toList()])
+        : _stream!;
+    return StreamRewriter.rewrite(
+      input: inputStream,
+      mutations: mutations,
+      options: options,
+    );
   }
 }

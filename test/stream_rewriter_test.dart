@@ -224,4 +224,43 @@ void main() {
       );
     });
   });
+
+  group('FlacTransformer.transformStream', () {
+    test('returns a valid FLAC stream with updated metadata', () async {
+      final bytes = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [VorbisCommentEntry(key: 'TITLE', value: 'Old')],
+          ),
+        ),
+        paddingSize: 512,
+      );
+
+      // Feed in small chunks
+      final chunks = <List<int>>[];
+      for (var i = 0; i < bytes.length; i += 50) {
+        chunks.add(bytes.sublist(i, i + 50 > bytes.length ? bytes.length : i + 50));
+      }
+
+      final transformer = FlacTransformer.fromStream(Stream.fromIterable(chunks));
+      final outputStream = await transformer.transformStream(
+        mutations: [const SetTag('TITLE', ['Stream Updated'])],
+      );
+      final result = await _collectStream(outputStream);
+      final doc = FlacParser.parseBytes(result);
+      expect(doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['Stream Updated']));
+    });
+
+    test('transformStream from bytes source works too', () async {
+      final bytes = buildFlac(paddingSize: 256);
+      final transformer = FlacTransformer.fromBytes(bytes);
+      final outputStream = await transformer.transformStream(
+        mutations: [const AddTag('ARTIST', 'Bytes Source')],
+      );
+      final result = await _collectStream(outputStream);
+      final doc = FlacParser.parseBytes(result);
+      expect(doc.vorbisComment!.comments.valuesOf('ARTIST'), equals(['Bytes Source']));
+    });
+  });
 }
