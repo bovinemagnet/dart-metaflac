@@ -269,4 +269,242 @@ void main() {
       expect(result.exitCode, equals(2));
     });
   });
+
+  group('tags set', () {
+    test('sets a tag value', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [VorbisCommentEntry(key: 'TITLE', value: 'Old')],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+
+      final result = await runMetaflac(
+          ['tags', 'set', tmpFile('test.flac'), 'ARTIST=Test']);
+      expect(result.exitCode, equals(0));
+
+      // Verify by re-reading
+      final verify =
+          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      expect(verify.stdout as String, contains('ARTIST=Test'));
+      expect(verify.stdout as String, contains('TITLE=Old'));
+    });
+
+    test('replaces existing tag value', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [VorbisCommentEntry(key: 'TITLE', value: 'Old')],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+
+      final result = await runMetaflac(
+          ['tags', 'set', tmpFile('test.flac'), 'TITLE=New']);
+      expect(result.exitCode, equals(0));
+
+      final verify =
+          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final out = verify.stdout as String;
+      expect(out, contains('TITLE=New'));
+      expect(out, isNot(contains('TITLE=Old')));
+    });
+
+    test('--dry-run does not modify file', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [VorbisCommentEntry(key: 'TITLE', value: 'Original')],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+      final originalBytes = File(tmpFile('test.flac')).readAsBytesSync();
+
+      final result = await runMetaflac(
+          ['tags', 'set', '--dry-run', tmpFile('test.flac'), 'ARTIST=Test']);
+      expect(result.exitCode, equals(0));
+      expect(result.stdout as String, contains('Dry run'));
+
+      final afterBytes = File(tmpFile('test.flac')).readAsBytesSync();
+      expect(afterBytes, equals(originalBytes));
+    });
+
+    test('--json produces JSON success output', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [VorbisCommentEntry(key: 'TITLE', value: 'T')],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+
+      final result = await runMetaflac(
+          ['tags', 'set', '--json', tmpFile('test.flac'), 'ARTIST=Test']);
+      expect(result.exitCode, equals(0));
+
+      final json =
+          jsonDecode(result.stdout as String) as Map<String, dynamic>;
+      expect(json['success'], isTrue);
+      expect(json['mutationsApplied'], equals(1));
+    });
+  });
+
+  group('tags add', () {
+    test('adds a tag value preserving existing', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [VorbisCommentEntry(key: 'GENRE', value: 'Rock')],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+
+      final result = await runMetaflac(
+          ['tags', 'add', tmpFile('test.flac'), 'GENRE=Jazz']);
+      expect(result.exitCode, equals(0));
+
+      final verify =
+          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final out = verify.stdout as String;
+      expect(out, contains('GENRE=Rock'));
+      expect(out, contains('GENRE=Jazz'));
+    });
+  });
+
+  group('tags remove', () {
+    test('removes all values for a key', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [
+              VorbisCommentEntry(key: 'TITLE', value: 'Song'),
+              VorbisCommentEntry(key: 'ARTIST', value: 'Band'),
+            ],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+
+      final result = await runMetaflac(
+          ['tags', 'remove', tmpFile('test.flac'), 'TITLE']);
+      expect(result.exitCode, equals(0));
+
+      final verify =
+          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final out = verify.stdout as String;
+      expect(out, isNot(contains('TITLE')));
+      expect(out, contains('ARTIST=Band'));
+    });
+  });
+
+  group('tags clear', () {
+    test('removes all tags', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [
+              VorbisCommentEntry(key: 'TITLE', value: 'Song'),
+              VorbisCommentEntry(key: 'ARTIST', value: 'Band'),
+            ],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+
+      final result =
+          await runMetaflac(['tags', 'clear', tmpFile('test.flac')]);
+      expect(result.exitCode, equals(0));
+
+      final verify =
+          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final out = (verify.stdout as String).trim();
+      expect(out, isEmpty);
+    });
+  });
+
+  group('tags export', () {
+    test('exports KEY=VALUE output to stdout', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [
+              VorbisCommentEntry(key: 'TITLE', value: 'My Song'),
+              VorbisCommentEntry(key: 'ARTIST', value: 'Test Artist'),
+            ],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+
+      final result =
+          await runMetaflac(['tags', 'export', tmpFile('test.flac')]);
+      expect(result.exitCode, equals(0));
+      final out = result.stdout as String;
+      expect(out, contains('TITLE=My Song'));
+      expect(out, contains('ARTIST=Test Artist'));
+    });
+
+    test('exports to file with --output', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [
+              VorbisCommentEntry(key: 'TITLE', value: 'Song'),
+            ],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+      final outPath = tmpFile('tags.txt');
+
+      final result = await runMetaflac(
+          ['tags', 'export', '--output=$outPath', tmpFile('test.flac')]);
+      expect(result.exitCode, equals(0));
+
+      final content = File(outPath).readAsStringSync();
+      expect(content, contains('TITLE=Song'));
+    });
+  });
+
+  group('tags import', () {
+    test('imports tags from a text file', () async {
+      final flac = buildFlac(
+        vorbisComment: VorbisCommentBlock(
+          comments: VorbisComments(
+            vendorString: 'v',
+            entries: [],
+          ),
+        ),
+      );
+      writeFlac('test.flac', flac);
+
+      final tagFilePath = tmpFile('tags.txt');
+      File(tagFilePath).writeAsStringSync('TITLE=Imported\nARTIST=Someone\n');
+
+      final result = await runMetaflac(
+          ['tags', 'import', '--from=$tagFilePath', tmpFile('test.flac')]);
+      expect(result.exitCode, equals(0));
+
+      final verify =
+          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final out = verify.stdout as String;
+      expect(out, contains('TITLE=Imported'));
+      expect(out, contains('ARTIST=Someone'));
+    });
+  });
 }
