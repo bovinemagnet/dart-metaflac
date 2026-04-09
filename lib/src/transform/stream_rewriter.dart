@@ -49,9 +49,7 @@ class StreamRewriter {
     }
 
     final accumulated = buffer.toBytes();
-    if (audioStartOffset == null) {
-      audioStartOffset = _findAudioOffset(accumulated) ?? accumulated.length;
-    }
+    audioStartOffset ??= _findAudioOffset(accumulated) ?? accumulated.length;
 
     // Parse the metadata region (FlacParser validates the fLaC marker).
     final doc = FlacParser.parseBytes(accumulated);
