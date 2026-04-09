@@ -29,4 +29,30 @@ class FlacSerializer {
     writer.writeBytes(audioData);
     return writer.toBytes();
   }
+
+  /// Serialises only the metadata region (fLaC marker + metadata blocks).
+  ///
+  /// Unlike [serialize], no audio data is appended. This is used by
+  /// [StreamRewriter] where audio is streamed separately.
+  static Uint8List serializeMetadataOnly(List<FlacMetadataBlock> blocks) {
+    final writer = ByteWriter();
+
+    // fLaC marker
+    writer.writeUint8(0x66);
+    writer.writeUint8(0x4C);
+    writer.writeUint8(0x61);
+    writer.writeUint8(0x43);
+
+    for (var i = 0; i < blocks.length; i++) {
+      final block = blocks[i];
+      final isLast = i == blocks.length - 1;
+      final payload = block.toPayloadBytes();
+      final typeByte = block.type.code & 0x7F;
+      writer.writeUint8(isLast ? (0x80 | typeByte) : typeByte);
+      writer.writeUint24(payload.length);
+      writer.writeBytes(payload);
+    }
+
+    return writer.toBytes();
+  }
 }
