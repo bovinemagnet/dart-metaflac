@@ -285,12 +285,42 @@ Future<int> _processFile({
     file.writeAsBytesSync(result.bytes);
 
     if (useJson) {
+      final changes = <String, dynamic>{};
+      final tagsSet = <String>[];
+      final tagsRemoved = <String>[];
+      var tagsCleared = false;
+      var picturesAdded = 0;
+      var picturesRemoved = 0;
+
+      for (final m in mutations) {
+        if (m is SetTag) tagsSet.add(m.key);
+        if (m is AddTag) tagsSet.add(m.key);
+        if (m is RemoveTag) tagsRemoved.add(m.key);
+        if (m is RemoveExactTagValue) tagsRemoved.add(m.key);
+        if (m is ClearTags) tagsCleared = true;
+        if (m is AddPicture) picturesAdded++;
+        if (m is ReplacePictureByType) {
+          picturesAdded++;
+          picturesRemoved++;
+        }
+        if (m is RemovePictureByType) picturesRemoved++;
+        if (m is RemoveAllPictures) picturesRemoved++;
+        if (m is SetPadding) changes['paddingSet'] = m.size;
+      }
+
+      if (tagsSet.isNotEmpty) changes['tagsSet'] = tagsSet;
+      if (tagsRemoved.isNotEmpty) changes['tagsRemoved'] = tagsRemoved;
+      if (tagsCleared) changes['tagsCleared'] = true;
+      if (picturesAdded > 0) changes['picturesAdded'] = picturesAdded;
+      if (picturesRemoved > 0) changes['picturesRemoved'] = picturesRemoved;
+
       _write(
         jsonEncode({
           'file': filePath,
           'success': true,
           'operation': 'write',
           'mutations': mutations.length,
+          'changes': changes,
         }),
         quiet,
       );
@@ -314,6 +344,9 @@ Future<int> _processFile({
     _reportError(
         filePath, e.message, 'MalformedMetadataException', useJson);
     return _exitInvalidFlac;
+  } on FlacIoException catch (e) {
+    _reportError(filePath, e.message, 'FlacIoException', useJson);
+    return _exitIoError;
   } on FileSystemException catch (e) {
     _reportError(filePath, e.message, 'FileSystemException', useJson);
     return _exitIoError;
