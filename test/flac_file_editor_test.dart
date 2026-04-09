@@ -1,9 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
-import 'package:dart_metaflac/src/io/flac_file_editor.dart';
-import 'package:dart_metaflac/src/io/flac_write_options.dart';
 import 'test_fixtures.dart';
 
 VorbisCommentBlock _makeVorbisBlock(Map<String, List<String>> tags) {

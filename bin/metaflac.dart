@@ -107,8 +107,6 @@ Future<int> _processFile({
     final prefix = withFilename ? '$filePath: ' : '';
 
     final preserveModtime = results['preserve-modtime'] as bool;
-    final originalModTime =
-        preserveModtime ? file.lastModifiedSync() : null;
 
     final bytes = file.readAsBytesSync();
     final doc = FlacParser.parseBytes(bytes);
@@ -253,9 +251,8 @@ Future<int> _processFile({
       )));
     }
 
-    final result = await transformFlac(bytes, mutations);
-
     if (dryRun) {
+      final result = await transformFlac(bytes, mutations);
       if (useJson) {
         _write(
           jsonEncode({
@@ -282,7 +279,13 @@ Future<int> _processFile({
       return _exitSuccess;
     }
 
-    file.writeAsBytesSync(result.bytes);
+    await FlacFileEditor.updateFile(
+      filePath,
+      mutations: mutations,
+      options: FlacWriteOptions(
+        preserveModTime: preserveModtime,
+      ),
+    );
 
     if (useJson) {
       final changes = <String, dynamic>{};
@@ -324,16 +327,6 @@ Future<int> _processFile({
         }),
         quiet,
       );
-    }
-
-    if (preserveModtime && originalModTime != null) {
-      if (!Platform.isWindows) {
-        final ts = originalModTime
-            .toIso8601String()
-            .replaceAll('T', ' ')
-            .substring(0, 19);
-        await Process.run('touch', ['-d', ts, filePath]);
-      }
     }
 
     return _exitSuccess;
