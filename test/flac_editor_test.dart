@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:test/test.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
 
+/// Builds a minimal in-memory FLAC file for testing.
 Uint8List buildTestFlac({
   int sampleRate = 44100,
   int channels = 2,
@@ -12,8 +13,10 @@ Uint8List buildTestFlac({
   List<PictureBlock>? pictures,
 }) {
   final siData = Uint8List(34);
-  siData[0] = 0; siData[1] = 16;
-  siData[2] = 1; siData[3] = 0;
+  siData[0] = 0;
+  siData[1] = 16;
+  siData[2] = 1;
+  siData[3] = 0;
 
   final sr = sampleRate;
   final ch = channels - 1;
@@ -29,16 +32,19 @@ Uint8List buildTestFlac({
   siData[17] = ts & 0xFF;
 
   final out = BytesBuilder();
-  out.addByte(0x66); out.addByte(0x4C); out.addByte(0x61); out.addByte(0x43);
+  out.addByte(0x66);
+  out.addByte(0x4C);
+  out.addByte(0x61);
+  out.addByte(0x43);
 
   Uint8List? vcData;
   if (vorbisComment != null) {
-    vcData = VorbisCommentProcessor.encode(vorbisComment);
+    vcData = vorbisComment.toPayloadBytes();
   }
 
   List<Uint8List>? picDataList;
   if (pictures != null && pictures.isNotEmpty) {
-    picDataList = pictures.map(PictureBlockProcessor.encode).toList();
+    picDataList = pictures.map((p) => p.toPayloadBytes()).toList();
   }
 
   final hasVC = vcData != null;
@@ -48,7 +54,9 @@ Uint8List buildTestFlac({
 
   final siIsLast = !hasVC && !hasPics && !hasPadding;
   out.addByte(siIsLast ? 0x80 : 0x00);
-  out.addByte(0); out.addByte(0); out.addByte(34);
+  out.addByte(0);
+  out.addByte(0);
+  out.addByte(34);
   out.add(siData);
 
   if (hasVC) {
@@ -81,106 +89,94 @@ Uint8List buildTestFlac({
   }
 
   // fake audio frame data
-  out.addByte(0xFF); out.addByte(0xF8);
+  out.addByte(0xFF);
+  out.addByte(0xF8);
   out.add(Uint8List(100));
 
   return out.toBytes();
 }
 
 void main() {
-  group('FlacEditor', () {
-    test('reads metadata', () async {
+  group('FlacMetadataEditor', () {
+    test('reads metadata', () {
       final bytes = buildTestFlac(sampleRate: 44100);
-      final editor = FlacEditor(Stream.value(bytes.toList()));
-      final meta = await editor.readMetadata();
-      expect(meta.streamInfo.sampleRate, equals(44100));
+      final doc = FlacParser.parseBytes(bytes);
+      expect(doc.streamInfo.sampleRate, equals(44100));
     });
 
-    test('updates vorbis comments', () async {
+    test('updates vorbis comments', () {
       final bytes = buildTestFlac(
         paddingSize: 512,
         vorbisComment: VorbisCommentBlock(
-          vendorString: 'original',
-          comments: {'TITLE': ['Old Title']},
+          comments: VorbisComments(
+            vendorString: 'original',
+            entries: [VorbisCommentEntry(key: 'TITLE', value: 'Old Title')],
+          ),
         ),
       );
-      final editor = FlacEditor(Stream.value(bytes.toList()));
-      final updated = editor.updateMetadata(
-        vorbisComments: {'TITLE': ['New Title'], 'ARTIST': ['New Artist']},
-        vendorString: 'new_vendor',
-      );
 
-      final updatedBytes = <int>[];
-      await for (final chunk in updated) {
-        updatedBytes.addAll(chunk);
-      }
+      final doc = FlacParser.parseBytes(bytes);
+      final updated = doc.edit((e) {
+        e.setTag('TITLE', ['New Title']);
+        e.setTag('ARTIST', ['New Artist']);
+      });
+      final audioData = bytes.sublist(doc.audioDataOffset);
+      final updatedBytes = FlacSerializer.serialize(updated.blocks, audioData);
 
-      final editor2 = FlacEditor(Stream.value(updatedBytes));
-      final meta = await editor2.readMetadata();
-      expect(meta.vorbisComment!.vendorString, equals('new_vendor'));
-      expect(meta.vorbisComment!.comments['TITLE'], equals(['New Title']));
-      expect(meta.vorbisComment!.comments['ARTIST'], equals(['New Artist']));
+      final doc2 = FlacParser.parseBytes(updatedBytes);
+      expect(
+          doc2.vorbisComment!.comments.valuesOf('TITLE'), equals(['New Title']));
+      expect(doc2.vorbisComment!.comments.valuesOf('ARTIST'),
+          equals(['New Artist']));
     });
 
-    test('updates picture blocks', () async {
+    test('updates picture blocks', () {
       final bytes = buildTestFlac(paddingSize: 512);
       final imgData = Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]);
-      final editor = FlacEditor(Stream.value(bytes.toList()));
-      final updated = editor.updateMetadata(
-        pictures: [
-          PictureBlock(
-            pictureType: 3,
-            mimeType: 'image/jpeg',
-            description: 'Cover',
-            width: 500,
-            height: 500,
-            colorDepth: 24,
-            indexedColorCount: 0,
-            data: imgData,
-          ),
-        ],
-      );
+      final doc = FlacParser.parseBytes(bytes);
+      final updated = doc.edit((e) {
+        e.addPicture(PictureBlock(
+          pictureType: PictureType.frontCover,
+          mimeType: 'image/jpeg',
+          description: 'Cover',
+          width: 500,
+          height: 500,
+          colorDepth: 24,
+          indexedColors: 0,
+          data: imgData,
+        ));
+      });
+      final audioData = bytes.sublist(doc.audioDataOffset);
+      final updatedBytes = FlacSerializer.serialize(updated.blocks, audioData);
 
-      final updatedBytes = <int>[];
-      await for (final chunk in updated) {
-        updatedBytes.addAll(chunk);
-      }
-
-      final editor2 = FlacEditor(Stream.value(updatedBytes));
-      final meta = await editor2.readMetadata();
-      expect(meta.pictures.length, equals(1));
-      expect(meta.pictures.first.mimeType, equals('image/jpeg'));
-      expect(meta.pictures.first.data, equals(imgData));
+      final doc2 = FlacParser.parseBytes(updatedBytes);
+      expect(doc2.pictures.length, equals(1));
+      expect(doc2.pictures.first.mimeType, equals('image/jpeg'));
+      expect(doc2.pictures.first.data, equals(imgData));
     });
 
-    test('full rewrite when no padding', () async {
+    test('full rewrite when no padding', () {
       final bytes = buildTestFlac(paddingSize: -1);
-      final newComments = {'TITLE': ['New Song']};
-      final editor = FlacEditor(Stream.value(bytes.toList()));
-      final updated = editor.updateMetadata(vorbisComments: newComments);
+      final doc = FlacParser.parseBytes(bytes);
+      final updated = doc.edit((e) {
+        e.setTag('TITLE', ['New Song']);
+      });
+      final audioData = bytes.sublist(doc.audioDataOffset);
+      final updatedBytes = FlacSerializer.serialize(updated.blocks, audioData);
 
-      final updatedBytes = <int>[];
-      await for (final chunk in updated) {
-        updatedBytes.addAll(chunk);
-      }
-
-      final editor2 = FlacEditor(Stream.value(updatedBytes));
-      final meta = await editor2.readMetadata();
-      expect(meta.vorbisComment!.comments['TITLE'], equals(['New Song']));
+      final doc2 = FlacParser.parseBytes(updatedBytes);
+      expect(doc2.vorbisComment!.comments.valuesOf('TITLE'),
+          equals(['New Song']));
     });
 
-    test('preserves audio data after metadata update', () async {
+    test('preserves audio data after metadata update', () {
       final bytes = buildTestFlac(paddingSize: 256);
-
-      final editor = FlacEditor(Stream.value(bytes.toList()));
-      final updated = editor.updateMetadata(
-        vorbisComments: {'TITLE': ['Updated']},
-      );
-
-      final updatedBytes = <int>[];
-      await for (final chunk in updated) {
-        updatedBytes.addAll(chunk);
-      }
+      final doc = FlacParser.parseBytes(bytes);
+      final updated = doc.edit((e) {
+        e.setTag('TITLE', ['Updated']);
+      });
+      final audioData = bytes.sublist(doc.audioDataOffset);
+      final updatedBytes = FlacSerializer.serialize(updated.blocks, audioData);
 
       var found = false;
       for (var i = 0; i < updatedBytes.length - 1; i++) {
