@@ -131,9 +131,9 @@ void main() {
       );
       final input = _chunkedStream(bytes, chunkSize: 64);
 
-      final outputStream = StreamRewriter.rewrite(
-        input,
-        [const SetTag('TITLE', ['New Title'])],
+      final outputStream = await StreamRewriter.rewrite(
+        input: input,
+        mutations: [const SetTag('TITLE', ['New Title'])],
       );
       final output = await _collectStream(outputStream);
 
@@ -159,9 +159,9 @@ void main() {
       final bytes = buildFlac(paddingSize: 256);
       final input = _chunkedStream(bytes, chunkSize: 64);
 
-      final outputStream = StreamRewriter.rewrite(
-        input,
-        [const AddTag('FOO', 'bar')],
+      final outputStream = await StreamRewriter.rewrite(
+        input: input,
+        mutations: [const AddTag('FOO', 'bar')],
       );
       final output = await _collectStream(outputStream);
 
@@ -183,7 +183,10 @@ void main() {
       );
       final input = _chunkedStream(bytes, chunkSize: 64);
 
-      final outputStream = StreamRewriter.rewrite(input, []);
+      final outputStream = await StreamRewriter.rewrite(
+        input: input,
+        mutations: [],
+      );
       final output = await _collectStream(outputStream);
 
       // Data should still be valid FLAC and preserve the tag.
@@ -198,9 +201,9 @@ void main() {
       final bytes = buildFlac(paddingSize: 512);
       final input = _chunkedStream(bytes, chunkSize: 64);
 
-      final outputStream = StreamRewriter.rewrite(
-        input,
-        [const AddTag('COMMENT', 'hello')],
+      final outputStream = await StreamRewriter.rewrite(
+        input: input,
+        mutations: [const AddTag('COMMENT', 'hello')],
         options: FlacTransformOptions(explicitPaddingSize: 2048),
       );
       final output = await _collectStream(outputStream);
@@ -215,9 +218,8 @@ void main() {
       final badBytes = Uint8List.fromList([0x00, 0x01, 0x02, 0x03, 0x04]);
       final input = _chunkedStream(badBytes, chunkSize: 64);
 
-      final outputStream = StreamRewriter.rewrite(input, []);
       expect(
-        () => _collectStream(outputStream),
+        () => StreamRewriter.rewrite(input: input, mutations: []),
         throwsA(isA<InvalidFlacException>()),
       );
     });

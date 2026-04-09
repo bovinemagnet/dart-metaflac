@@ -19,89 +19,118 @@ class StreamRewriter {
   /// Rewrites the metadata of a FLAC stream, applying [mutations] and
   /// emitting the result as a new stream.
   ///
-  /// The input [stream] is consumed in chunks. Metadata blocks are
+  /// The [input] stream is consumed in chunks. Metadata blocks are
   /// buffered until the metadata/audio boundary is found; audio chunks
   /// are passed through without modification.
-  static Stream<List<int>> rewrite(
-    Stream<List<int>> stream,
-    List<MetadataMutation> mutations, {
+  static Future<Stream<List<int>>> rewrite({
+    required Stream<List<int>> input,
+    required List<MetadataMutation> mutations,
     FlacTransformOptions? options,
-  }) {
-    final controller = StreamController<List<int>>();
+  }) async {
+    final effectiveOptions = options ?? FlacTransformOptions.defaults;
+    final buffer = BytesBuilder();
+    int? audioStartOffset;
+    final audioChunks = <List<int>>[];
 
-    scheduleMicrotask(() {
-      _process(stream, mutations, options, controller);
-    });
+    await for (final chunk in input) {
+      if (audioStartOffset != null) {
+        // Already past metadata — collect audio chunks directly.
+        audioChunks.add(chunk);
+        continue;
+      }
+
+      buffer.add(chunk);
+      final accumulated = buffer.toBytes();
+      audioStartOffset = _findAudioOffset(accumulated);
+
+      if (audioStartOffset != null && audioStartOffset < accumulated.length) {
+        // Split: bytes past boundary are first audio chunk.
+        audioChunks.add(Uint8List.sublistView(accumulated, audioStartOffset));
+      }
+    }
+
+    final accumulated = buffer.toBytes();
+    if (audioStartOffset == null) {
+      audioStartOffset = _findAudioOffset(accumulated) ?? accumulated.length;
+    }
+
+    // Parse ONLY the metadata portion.
+    final metadataBytes =
+        Uint8List.sublistView(accumulated, 0, audioStartOffset);
+
+    // Validate fLaC magic bytes.
+    if (metadataBytes.length < 4 ||
+        metadataBytes[0] != flacMagicByte0 ||
+        metadataBytes[1] != flacMagicByte1 ||
+        metadataBytes[2] != flacMagicByte2 ||
+        metadataBytes[3] != flacMagicByte3) {
+      throw InvalidFlacException('Invalid FLAC marker');
+    }
+
+    // Parse the metadata region.
+    final doc = FlacParser.parseBytes(accumulated);
+
+    // Apply mutations.
+    final editor = FlacMetadataEditor.fromDocument(doc);
+    for (final m in mutations) {
+      editor.applyMutation(m);
+    }
+
+    if (effectiveOptions.explicitPaddingSize != null) {
+      editor.setPadding(effectiveOptions.explicitPaddingSize!);
+    }
+
+    final updated = editor.build();
+
+    // Serialise new metadata only.
+    final newMetadata =
+        FlacSerializer.serializeMetadataOnly(updated.blocks);
+
+    // Emit metadata then audio chunks.
+    final controller = StreamController<List<int>>();
+    controller.add(newMetadata);
+    for (final audioChunk in audioChunks) {
+      controller.add(audioChunk);
+    }
+    controller.close();
 
     return controller.stream;
   }
 
-  static Future<void> _process(
-    Stream<List<int>> stream,
-    List<MetadataMutation> mutations,
-    FlacTransformOptions? options,
-    StreamController<List<int>> controller,
-  ) async {
-    try {
-      final allBytes = BytesBuilder();
+  /// Scans accumulated bytes for the metadata/audio boundary.
+  ///
+  /// Walks block headers from offset 4 (after fLaC marker) until the
+  /// isLast block is found. Returns the offset where audio data begins,
+  /// or null if not enough bytes have been accumulated yet.
+  static int? _findAudioOffset(Uint8List data) {
+    if (data.length < 4) return null;
 
-      await for (final chunk in stream) {
-        allBytes.add(chunk);
-      }
-
-      final bytes = allBytes.toBytes();
-      final data = Uint8List.fromList(bytes);
-
-      // Validate fLaC magic bytes.
-      if (data.length < 4 ||
-          data[0] != flacMagicByte0 ||
-          data[1] != flacMagicByte1 ||
-          data[2] != flacMagicByte2 ||
-          data[3] != flacMagicByte3) {
-        throw InvalidFlacException('Invalid FLAC marker');
-      }
-
-      // Find the metadata/audio boundary by scanning block headers.
-      var offset = 4; // skip fLaC marker
-      while (offset + flacMetadataHeaderSize <= data.length) {
-        final headerByte = data[offset];
-        final isLast = (headerByte & 0x80) != 0;
-        final payloadLength = (data[offset + 1] << 16) |
-            (data[offset + 2] << 8) |
-            data[offset + 3];
-        offset += flacMetadataHeaderSize + payloadLength;
-        if (isLast) break;
-      }
-
-      final audioOffset = offset;
-      final audioData = data.sublist(audioOffset);
-
-      // Parse the metadata region.
-      final doc = FlacParser.parseBytes(data);
-
-      // Apply mutations.
-      final editor = FlacMetadataEditor.fromDocument(doc);
-      for (final m in mutations) {
-        editor.applyMutation(m);
-      }
-
-      if (options?.explicitPaddingSize != null) {
-        editor.setPadding(options!.explicitPaddingSize!);
-      }
-
-      final updated = editor.build();
-
-      // Serialise new metadata only.
-      final metadataBytes =
-          FlacSerializer.serializeMetadataOnly(updated.blocks);
-
-      // Emit metadata then audio.
-      controller.add(metadataBytes);
-      controller.add(audioData);
-      await controller.close();
-    } catch (e, st) {
-      controller.addError(e, st);
-      await controller.close();
+    // Check fLaC marker.
+    if (data[0] != flacMagicByte0 ||
+        data[1] != flacMagicByte1 ||
+        data[2] != flacMagicByte2 ||
+        data[3] != flacMagicByte3) {
+      return null;
     }
+
+    var offset = 4; // Skip fLaC marker.
+    while (offset + flacMetadataHeaderSize <= data.length) {
+      final headerByte = data[offset];
+      final isLast = (headerByte & 0x80) != 0;
+      final payloadLength = (data[offset + 1] << 16) |
+          (data[offset + 2] << 8) |
+          data[offset + 3];
+      final blockEnd = offset + flacMetadataHeaderSize + payloadLength;
+
+      if (blockEnd > data.length) {
+        // Not enough data accumulated yet for this block.
+        return null;
+      }
+
+      offset = blockEnd;
+      if (isLast) return offset;
+    }
+
+    return null;
   }
 }
