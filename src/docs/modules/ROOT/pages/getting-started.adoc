@@ -15,7 +15,7 @@ Add the library to your `pubspec.yaml`:
 [source,yaml]
 ----
 dependencies:
-  dart_metaflac: ^0.1.0
+  dart_metaflac: ^0.0.2
 ----
 
 Or install via the command line:

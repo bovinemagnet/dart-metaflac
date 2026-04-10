@@ -1,6 +1,6 @@
 name: dart_metaflac
 description: A pure Dart implementation of metaflac for reading and writing FLAC metadata. No dart:io dependency in core — works with Dart, Flutter, and web applications.
-version: 0.0.1
+version: 0.0.2
 repository: https://github.com/bovinemagnet/dart-metaflac
 homepage: https://github.com/bovinemagnet/dart-metaflac
 issue_tracker: https://github.com/bovinemagnet/dart-metaflac/issues

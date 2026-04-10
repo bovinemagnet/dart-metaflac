@@ -1,11 +1,11 @@
 name: dart_metaflac_flutter_example
 description: Minimal Flutter example showing how to use dart_metaflac in a Flutter app. Works on mobile, desktop, and web targets.
 publish_to: none
-version: 0.1.0
+version: 0.0.1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: '>=3.0.0'
+  sdk: ">=3.0.0 <4.0.0"
+  flutter: ">=3.0.0"
 
 dependencies:
   flutter:

@@ -29,19 +29,63 @@ Future<void> main(List<String> args) async {
   }
 
   final parser = ArgParser()
+    // ── List / inspect ──────────────────────────────────────────────────
     ..addFlag('list', help: 'List all metadata blocks')
+    // ── STREAMINFO scalar show-ops (one raw value per invocation) ───────
     ..addFlag('show-md5', help: 'Show MD5 from STREAMINFO')
+    ..addFlag('show-md5sum',
+        help: 'Show MD5 from STREAMINFO (metaflac-compatible alias)')
+    ..addFlag('show-min-blocksize',
+        help: 'Show STREAMINFO minimum block size')
+    ..addFlag('show-max-blocksize',
+        help: 'Show STREAMINFO maximum block size')
+    ..addFlag('show-min-framesize',
+        help: 'Show STREAMINFO minimum frame size')
+    ..addFlag('show-max-framesize',
+        help: 'Show STREAMINFO maximum frame size')
+    ..addFlag('show-sample-rate', help: 'Show STREAMINFO sample rate')
+    ..addFlag('show-channels', help: 'Show STREAMINFO channel count')
+    ..addFlag('show-bps', help: 'Show STREAMINFO bits per sample')
+    ..addFlag('show-total-samples',
+        help: 'Show STREAMINFO total sample count')
+    // ── Vorbis comment show-ops ─────────────────────────────────────────
+    ..addFlag('show-vendor-tag',
+        help: 'Show the VORBIS_COMMENT vendor string')
+    ..addOption('show-tag',
+        help: 'Show all values for a specific tag (NAME)')
+    ..addFlag('show-all-tags',
+        help: 'Show all Vorbis comment tags (alias for export to stdout)')
+    // ── Existing read/write ops ─────────────────────────────────────────
     ..addOption('export-tags-to',
         help: 'Export Vorbis comments to file (use - for stdout)')
     ..addOption('export-picture-to', help: 'Export picture to file')
     ..addMultiOption('remove-tag', help: 'Remove tag by name')
+    ..addOption('remove-first-tag',
+        help: 'Remove the first tag entry matching FIELD')
     ..addFlag('remove-all-tags', help: 'Remove all Vorbis comments')
+    ..addOption('remove-all-tags-except',
+        help:
+            'Remove all tags except NAME1[=NAME2[=…]] (metaflac "=" separator)')
+    ..addFlag('remove-replay-gain',
+        help: 'Remove all REPLAYGAIN_* tags', negatable: false)
     ..addMultiOption('set-tag', help: 'Set a tag (KEY=VALUE)')
+    ..addMultiOption('set-tag-from-file',
+        help: 'Set a tag where VALUE is read from a file (KEY=FILE)')
     ..addOption('import-tags-from', help: 'Import tags from file')
     ..addOption('import-picture-from', help: 'Import picture from file')
+    // ── Global options ──────────────────────────────────────────────────
+    ..addOption('output-name',
+        abbr: 'o',
+        help: 'Write output to FILE instead of modifying input in place')
     ..addFlag('preserve-modtime', help: 'Preserve file modification time')
     ..addFlag('with-filename', help: 'Print filename with output')
-    ..addFlag('no-utf8-convert', help: 'Do not convert tags to UTF-8')
+    ..addFlag('no-filename',
+        help: 'Never print filename with output', negatable: false)
+    ..addFlag('no-utf8-convert',
+        help: 'Skip UTF-8 conversion (no-op: Dart strings are always UTF-8)')
+    ..addFlag('dont-use-padding',
+        help: 'Do not reuse existing padding; force full rewrite',
+        negatable: false)
     ..addFlag('json', help: 'Output in JSON format', negatable: false)
     ..addFlag('dry-run',
         help: 'Show what would change without writing', negatable: false)
@@ -119,11 +163,16 @@ Future<int> _processFile({
       return _exitIoError;
     }
 
-    final withFilename =
-        results['with-filename'] as bool || files.length > 1;
+    // --no-filename beats --with-filename and defaults to on for a
+    // single input, off for multiple (matching metaflac).
+    final noFilename = results['no-filename'] as bool;
+    final withFilename = !noFilename &&
+        (results['with-filename'] as bool || files.length > 1);
     final prefix = withFilename ? '$filePath: ' : '';
 
     final preserveModtime = results['preserve-modtime'] as bool;
+    final dontUsePadding = results['dont-use-padding'] as bool;
+    final outputName = results['output-name'] as String?;
 
     final bytes = file.readAsBytesSync();
     final doc = FlacParser.parseBytes(bytes);
@@ -140,7 +189,8 @@ Future<int> _processFile({
       return _exitSuccess;
     }
 
-    if (results['show-md5'] as bool) {
+    if ((results['show-md5'] as bool) ||
+        (results['show-md5sum'] as bool)) {
       final md5Hex = doc.streamInfo.md5Signature
           .map((b) => b.toRadixString(16).padLeft(2, '0'))
           .join();
@@ -148,6 +198,87 @@ Future<int> _processFile({
         _write(jsonEncode({'file': filePath, 'md5': md5Hex}), quiet);
       } else {
         _write('$prefix$md5Hex', quiet);
+      }
+      return _exitSuccess;
+    }
+
+    // STREAMINFO scalar show-ops. Each prints exactly one raw value so
+    // shell scripts can consume them directly. If JSON mode is on, wrap
+    // the value in a small object.
+    int? scalarValue;
+    String? scalarKey;
+    if (results['show-min-blocksize'] as bool) {
+      scalarKey = 'minBlockSize';
+      scalarValue = doc.streamInfo.minBlockSize;
+    } else if (results['show-max-blocksize'] as bool) {
+      scalarKey = 'maxBlockSize';
+      scalarValue = doc.streamInfo.maxBlockSize;
+    } else if (results['show-min-framesize'] as bool) {
+      scalarKey = 'minFrameSize';
+      scalarValue = doc.streamInfo.minFrameSize;
+    } else if (results['show-max-framesize'] as bool) {
+      scalarKey = 'maxFrameSize';
+      scalarValue = doc.streamInfo.maxFrameSize;
+    } else if (results['show-sample-rate'] as bool) {
+      scalarKey = 'sampleRate';
+      scalarValue = doc.streamInfo.sampleRate;
+    } else if (results['show-channels'] as bool) {
+      scalarKey = 'channels';
+      scalarValue = doc.streamInfo.channelCount;
+    } else if (results['show-bps'] as bool) {
+      scalarKey = 'bitsPerSample';
+      scalarValue = doc.streamInfo.bitsPerSample;
+    } else if (results['show-total-samples'] as bool) {
+      scalarKey = 'totalSamples';
+      scalarValue = doc.streamInfo.totalSamples;
+    }
+    if (scalarKey != null) {
+      if (useJson) {
+        _write(
+            jsonEncode({'file': filePath, scalarKey: scalarValue}), quiet);
+      } else {
+        _write('$prefix$scalarValue', quiet);
+      }
+      return _exitSuccess;
+    }
+
+    if (results['show-vendor-tag'] as bool) {
+      final vendor = doc.vorbisComment?.comments.vendorString ?? '';
+      if (useJson) {
+        _write(jsonEncode({'file': filePath, 'vendorString': vendor}),
+            quiet);
+      } else {
+        _write('$prefix$vendor', quiet);
+      }
+      return _exitSuccess;
+    }
+
+    final showTag = results['show-tag'] as String?;
+    if (showTag != null) {
+      final values = doc.vorbisComment?.comments.valuesOf(showTag) ??
+          const <String>[];
+      if (useJson) {
+        _write(
+            jsonEncode(
+                {'file': filePath, 'tag': showTag, 'values': values}),
+            quiet);
+      } else {
+        for (final v in values) {
+          _write('$prefix${showTag.toUpperCase()}=$v', quiet);
+        }
+      }
+      return _exitSuccess;
+    }
+
+    if (results['show-all-tags'] as bool) {
+      final vc = doc.vorbisComment;
+      if (useJson) {
+        final tags = vc?.comments.asMultiMap() ?? const <String, List<String>>{};
+        _write(jsonEncode({'file': filePath, 'tags': tags}), quiet);
+      } else if (vc != null) {
+        for (final entry in vc.comments.entries) {
+          _write('$prefix${entry.key}=${entry.value}', quiet);
+        }
       }
       return _exitSuccess;
     }
@@ -203,14 +334,23 @@ Future<int> _processFile({
     // ── Write operations ────────────────────────────────────────────────
 
     final removeTags = results['remove-tag'] as List<String>;
+    final removeFirstTag = results['remove-first-tag'] as String?;
     final removeAllTags = results['remove-all-tags'] as bool;
+    final removeAllTagsExcept = results['remove-all-tags-except'] as String?;
+    final removeReplayGain = results['remove-replay-gain'] as bool;
     final setTags = results['set-tag'] as List<String>;
+    final setTagFromFile =
+        results['set-tag-from-file'] as List<String>;
     final importTagsFrom = results['import-tags-from'] as String?;
     final importPictureFrom = results['import-picture-from'] as String?;
 
     final hasWriteOp = removeTags.isNotEmpty ||
+        removeFirstTag != null ||
         removeAllTags ||
+        removeAllTagsExcept != null ||
+        removeReplayGain ||
         setTags.isNotEmpty ||
+        setTagFromFile.isNotEmpty ||
         importTagsFrom != null ||
         importPictureFrom != null;
 
@@ -225,8 +365,34 @@ Future<int> _processFile({
       mutations.add(const ClearTags());
     }
 
+    if (removeAllTagsExcept != null) {
+      // metaflac uses `=` as the separator inside the value, e.g.
+      // --remove-all-tags-except=TITLE=ARTIST=ALBUM
+      final keep =
+          removeAllTagsExcept.split('=').where((s) => s.isNotEmpty).toSet();
+      mutations.add(ClearTagsExcept(keep));
+    }
+
+    if (removeReplayGain) {
+      // Matches the standard ReplayGain 2.0 field names.
+      const replayGainFields = [
+        'REPLAYGAIN_REFERENCE_LOUDNESS',
+        'REPLAYGAIN_TRACK_GAIN',
+        'REPLAYGAIN_TRACK_PEAK',
+        'REPLAYGAIN_ALBUM_GAIN',
+        'REPLAYGAIN_ALBUM_PEAK',
+      ];
+      for (final field in replayGainFields) {
+        mutations.add(RemoveTag(field));
+      }
+    }
+
     for (final tag in removeTags) {
       mutations.add(RemoveTag(tag.toUpperCase()));
+    }
+
+    if (removeFirstTag != null) {
+      mutations.add(RemoveFirstTag(removeFirstTag.toUpperCase()));
     }
 
     for (final tag in setTags) {
@@ -238,6 +404,19 @@ Future<int> _processFile({
       final key = tag.substring(0, eqIdx).toUpperCase();
       final value = tag.substring(eqIdx + 1);
       mutations.add(AddTag(key, value));
+    }
+
+    for (final spec in setTagFromFile) {
+      final eqIdx = spec.indexOf('=');
+      if (eqIdx < 0) {
+        stderr.writeln(
+            'Invalid --set-tag-from-file format (expected KEY=FILE): $spec');
+        continue;
+      }
+      final key = spec.substring(0, eqIdx).toUpperCase();
+      final path = spec.substring(eqIdx + 1);
+      final contents = File(path).readAsStringSync().trimRight();
+      mutations.add(SetTag(key, [contents]));
     }
 
     if (importTagsFrom != null) {
@@ -296,11 +475,20 @@ Future<int> _processFile({
       return _exitSuccess;
     }
 
+    // --output-name (-o) switches to outputToNewFile mode.
+    // --dont-use-padding forces a full rewrite by setting explicit
+    // padding to zero and using safeAtomic (no in-place overwrite).
+    final writeMode = outputName != null
+        ? WriteMode.outputToNewFile
+        : WriteMode.safeAtomic;
     await FlacFileEditor.updateFile(
       filePath,
       mutations: mutations,
       options: FlacWriteOptions(
         preserveModTime: preserveModtime,
+        writeMode: writeMode,
+        outputPath: outputName,
+        explicitPaddingSize: dontUsePadding ? 0 : null,
       ),
     );
 

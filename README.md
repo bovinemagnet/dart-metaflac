@@ -30,7 +30,7 @@ Or add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  dart_metaflac: ^0.1.0
+  dart_metaflac: ^0.0.2
 ```
 
 ## Public entry points

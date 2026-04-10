@@ -83,6 +83,21 @@ final class RemoveExactTagValue extends MetadataMutation {
   final String value;
 }
 
+/// Remove only the **first** Vorbis comment entry matching a key.
+///
+/// Subsequent entries with the same key are preserved. If no entry
+/// matches, the mutation is a no-op. This mirrors the reference
+/// `metaflac --remove-first-tag=FIELD` operation.
+///
+/// See also: [RemoveTag], which removes every matching entry.
+final class RemoveFirstTag extends MetadataMutation {
+  /// Create a mutation that removes the first entry for [key].
+  const RemoveFirstTag(this.key);
+
+  /// The case-insensitive Vorbis comment field name.
+  final String key;
+}
+
 /// Remove all Vorbis comment entries.
 ///
 /// After this mutation is applied, the Vorbis comment block will contain
@@ -90,6 +105,23 @@ final class RemoveExactTagValue extends MetadataMutation {
 final class ClearTags extends MetadataMutation {
   /// Create a mutation that clears all Vorbis comment entries.
   const ClearTags();
+}
+
+/// Remove every Vorbis comment entry except those whose key is in
+/// [keepKeys].
+///
+/// Key matching is case-insensitive. The vendor string is always
+/// preserved. This mirrors the reference
+/// `metaflac --remove-all-tags-except=NAME1=NAME2=…` operation.
+///
+/// See also: [ClearTags], which removes every entry unconditionally.
+final class ClearTagsExcept extends MetadataMutation {
+  /// Create a mutation that retains only the entries whose key is in
+  /// [keepKeys].
+  const ClearTagsExcept(this.keepKeys);
+
+  /// The set of case-insensitive field names to retain.
+  final Set<String> keepKeys;
 }
 
 /// Append a [PictureBlock] to the metadata.

@@ -115,6 +115,42 @@ final class VorbisComments {
     );
   }
 
+  /// Return a new [VorbisComments] with only the **first** entry matching
+  /// [key] (case-insensitive) removed.
+  ///
+  /// Subsequent entries with the same key are preserved. If no entry
+  /// matches, the result is byte-identical to the original.
+  ///
+  /// See also: [removeKey], which removes every matching entry.
+  VorbisComments removeFirst(String key) {
+    final canonical = key.toUpperCase();
+    final result = <VorbisCommentEntry>[];
+    var removed = false;
+    for (final entry in entries) {
+      if (!removed && entry.canonicalKey == canonical) {
+        removed = true;
+        continue;
+      }
+      result.add(entry);
+    }
+    return VorbisComments(vendorString: vendorString, entries: result);
+  }
+
+  /// Return a new [VorbisComments] with every entry removed except those
+  /// whose key (case-insensitive) is in [keepKeys].
+  ///
+  /// The [vendorString] is always retained. This mirrors the reference
+  /// `metaflac --remove-all-tags-except=NAME1=NAME2=…` operation.
+  VorbisComments clearExcept(Set<String> keepKeys) {
+    final canonicalKeep = keepKeys.map((k) => k.toUpperCase()).toSet();
+    return VorbisComments(
+      vendorString: vendorString,
+      entries: entries
+          .where((e) => canonicalKeep.contains(e.canonicalKey))
+          .toList(),
+    );
+  }
+
   /// Return a new [VorbisComments] with all entries removed, retaining
   /// only the [vendorString].
   VorbisComments clear() {

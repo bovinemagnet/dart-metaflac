@@ -125,8 +125,14 @@ class FlacMetadataEditor {
       case RemoveExactTagValue m:
         return _updateVorbisComments(
             blocks, (vc) => vc.removeExact(m.key, m.value));
+      case RemoveFirstTag m:
+        return _updateVorbisComments(
+            blocks, (vc) => vc.removeFirst(m.key));
       case ClearTags _:
         return _updateVorbisComments(blocks, (vc) => vc.clear());
+      case ClearTagsExcept m:
+        return _updateVorbisComments(
+            blocks, (vc) => vc.clearExcept(m.keepKeys));
       case AddPicture m:
         return [...blocks, m.picture];
       case ReplacePictureByType m:

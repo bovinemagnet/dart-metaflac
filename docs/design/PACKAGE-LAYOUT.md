@@ -177,7 +177,7 @@ linter:
 ```yaml
 name: dart_metaflac
 description: Pure Dart FLAC metadata transformation library.
-version: 0.1.0-dev.1
+version: 0.0.1-dev.1
 environment:
   sdk: ^3.5.0
 
@@ -194,7 +194,7 @@ dev_dependencies:
 ```yaml
 name: dart_metaflac_io
 description: File-system adapters and safe persistence helpers for dart_metaflac.
-version: 0.1.0-dev.1
+version: 0.0.1-dev.1
 environment:
   sdk: ^3.5.0
 
@@ -212,7 +212,7 @@ dev_dependencies:
 ```yaml
 name: dart_metaflac_cli
 description: CLI for dart_metaflac with metaflac-compatible aliases.
-version: 0.1.0-dev.1
+version: 0.0.1-dev.1
 environment:
   sdk: ^3.5.0
 
