@@ -1,8 +1,27 @@
 /// Shared test fixtures for building in-memory FLAC files.
 library;
 
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:dart_metaflac/dart_metaflac.dart';
+
+// ─── Real FLAC Fixture Helpers ──────────────────────────────────────────────
+
+/// Returns the absolute path to flac/siren.flac, resolving from the project root.
+String sirenFlacPath() {
+  var root = Directory.current.path;
+  if (!File('$root/pubspec.yaml').existsSync()) {
+    root = '/home/paul/gitHUB/dart-metaflac';
+  }
+  return '$root/flac/siren.flac';
+}
+
+/// Copies siren.flac into [tempDir] and returns the path to the copy.
+String copySirenTo(Directory tempDir, {String name = 'siren.flac'}) {
+  final dest = '${tempDir.path}/$name';
+  File(sirenFlacPath()).copySync(dest);
+  return dest;
+}
 
 // ─── FLAC Fixture Builder ─────────────────────────────────────────────────────
 

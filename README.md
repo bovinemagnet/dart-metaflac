@@ -167,6 +167,8 @@ The library is organised into layered modules:
 
 See [doc/MIGRATION.md](doc/MIGRATION.md) for a guide on migrating from the reference `metaflac` tool.
 
+See [doc/AUDIO-INTEGRITY.md](doc/AUDIO-INTEGRITY.md) for how the library and test suite ensure metadata operations never corrupt audio data.
+
 ## Licence
 
 See [LICENCE](LICENCE) for details.
