@@ -343,6 +343,129 @@ void main() {
       expect(after.stdout.toString(), contains('COMMENT from a file'));
     });
   });
+
+  // These tests specifically exercise the `bin/metaflac.dart` legacy
+  // router's flag → operation wiring. The underlying behaviour is
+  // already covered by the modern subcommand tests in
+  // `test/cli_subcommands_test.dart`, but those tests never drive the
+  // legacy router, so a regression in the router glue would not be
+  // caught without these.
+  group('Legacy router flag wiring', () {
+    test('--remove-tag drops every matching entry', () async {
+      final path = buildFixture();
+      final r =
+          await runCli(['--remove-tag=ARTIST', '--remove-tag=DATE', path]);
+      expect(r.exitCode, 0);
+
+      final after = await runCli(['--show-all-tags', path]);
+      expect(after.exitCode, 0);
+      final out = after.stdout.toString();
+      expect(out, isNot(contains('ARTIST')));
+      expect(out, isNot(contains('DATE')));
+      expect(out, contains('TITLE=Parity Title'));
+      expect(out, contains('ALBUM=Parity Album'));
+    });
+
+    test('--remove-all-tags strips every entry', () async {
+      final path = buildFixture();
+      final r = await runCli(['--remove-all-tags', path]);
+      expect(r.exitCode, 0);
+
+      final after = await runCli(['--show-all-tags', path]);
+      expect(after.exitCode, 0);
+      // Every user tag gone; --show-all-tags emits nothing on the
+      // happy path (the block may still exist with just the vendor
+      // string, but no entries print).
+      expect(after.stdout.toString().trim(), isEmpty);
+    });
+
+    test('--import-tags-from reads NAME=VALUE lines from a file', () async {
+      // Start from a minimal fixture with no tags so we can tell exactly
+      // what got imported.
+      final bytes = buildFlac(paddingSize: -1);
+      final path = tmpFile('empty.flac');
+      File(path).writeAsBytesSync(bytes);
+
+      final tagsFile = tmpFile('tags.txt');
+      File(tagsFile).writeAsStringSync(
+        'ARTIST=Imported Artist\n'
+        'TITLE=Imported Title\n'
+        'GENRE=Imported Genre\n',
+      );
+
+      final r = await runCli(['--import-tags-from=$tagsFile', path]);
+      expect(r.exitCode, 0);
+
+      final after = await runCli(['--show-all-tags', path]);
+      expect(after.exitCode, 0);
+      final out = after.stdout.toString();
+      expect(out, contains('ARTIST=Imported Artist'));
+      expect(out, contains('TITLE=Imported Title'));
+      expect(out, contains('GENRE=Imported Genre'));
+    });
+
+    test('--import-picture-from attaches a PICTURE block', () async {
+      final bytes = buildFlac(paddingSize: -1);
+      final path = tmpFile('nopicture.flac');
+      File(path).writeAsBytesSync(bytes);
+
+      // Tiny valid JPEG-ish payload; the library only needs the bytes,
+      // it does not decode them.
+      final picPath = tmpFile('cover.jpg');
+      File(picPath).writeAsBytesSync([0xFF, 0xD8, 0xFF, 0xE0, 0, 0, 0, 0]);
+
+      final r = await runCli(['--import-picture-from=$picPath', path]);
+      expect(r.exitCode, 0);
+
+      // Use --list to confirm the picture block now exists.
+      final after = await runCli(['--list', '--json', path]);
+      expect(after.exitCode, 0);
+      final json = jsonDecode(after.stdout.toString()) as Map<String, dynamic>;
+      expect(json['pictures'], isNotNull);
+      expect(json['pictures'] as List, hasLength(1));
+    });
+
+    test('--export-picture-to writes the embedded picture to disc',
+        () async {
+      final path = buildFixture();
+      // First attach a picture so there is something to export.
+      final picPath = tmpFile('in.jpg');
+      final picBytes = [0xFF, 0xD8, 0xFF, 0xE0, 0xDE, 0xAD, 0xBE, 0xEF];
+      File(picPath).writeAsBytesSync(picBytes);
+      final attach = await runCli(['--import-picture-from=$picPath', path]);
+      expect(attach.exitCode, 0);
+
+      // Now export it back out to a different path.
+      final outPath = tmpFile('out.jpg');
+      final exp = await runCli(['--export-picture-to=$outPath', path]);
+      expect(exp.exitCode, 0);
+      expect(File(outPath).existsSync(), isTrue);
+      expect(File(outPath).readAsBytesSync(), equals(picBytes));
+    });
+
+    test('--output-name long form writes to a new file', () async {
+      final path = buildFixture();
+      final outPath = tmpFile('via-long-form.flac');
+      final originalBytes = File(path).readAsBytesSync();
+
+      final r = await runCli([
+        '--set-tag=ARTIST=Long Form Artist',
+        '--output-name=$outPath',
+        path,
+      ]);
+      expect(r.exitCode, 0);
+      expect(File(outPath).existsSync(), isTrue);
+
+      // Input untouched.
+      expect(File(path).readAsBytesSync(), equals(originalBytes));
+
+      // Output carries the new tag.
+      final show = await runCli(['--show-tag=ARTIST', outPath]);
+      expect(show.exitCode, 0);
+      expect(show.stdout.toString().trim(),
+          contains('ARTIST=Long Form Artist'));
+    });
+  });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
