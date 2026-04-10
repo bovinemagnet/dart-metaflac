@@ -156,47 +156,113 @@ dart run bin/metaflac.dart padding remove song.flac
 
 == Compatibility Flags
 
-For users migrating from the reference `metaflac` tool, legacy flags are supported:
+For users migrating from the reference `metaflac` tool, legacy flags are supported.
+See xref:migration.adoc[Migration from metaflac] for a complete mapping and known differences.
 
-[cols="2,2", options="header"]
+=== List and Show Operations
+
+These flags read metadata and print one or more values to stdout.
+Each flag exits after producing its output and does not modify the file.
+
+[cols="3,4", options="header"]
 |===
-| Legacy Flag | Equivalent Subcommand
+| Legacy Flag | Description
 
 | `--list`
-| `blocks list`
+| List all metadata blocks; equivalent to `blocks list`
 
 | `--show-md5`
-| `inspect` (MD5 field)
+| Print the MD5 signature from STREAMINFO
 
-| `--set-tag=KEY=VALUE`
-| `tags set <file> KEY=VALUE`
+| `--show-md5sum`
+| Alias for `--show-md5`; provided for `metaflac` compatibility
 
-| `--remove-tag=KEY`
-| `tags remove <file> KEY`
+| `--show-min-blocksize`
+| Print the minimum block size from STREAMINFO (one integer)
 
-| `--remove-all-tags`
-| `tags clear`
+| `--show-max-blocksize`
+| Print the maximum block size from STREAMINFO (one integer)
 
-| `--export-tags-to=FILE`
-| `tags export --output=FILE`
+| `--show-min-framesize`
+| Print the minimum frame size from STREAMINFO (one integer)
 
-| `--import-tags-from=FILE`
-| `tags import --from=FILE`
+| `--show-max-framesize`
+| Print the maximum frame size from STREAMINFO (one integer)
 
-| `--export-picture-to=FILE`
-| `picture export --output=FILE`
+| `--show-sample-rate`
+| Print the sample rate from STREAMINFO (one integer)
 
-| `--import-picture-from=FILE`
-| `picture add --file=FILE`
+| `--show-channels`
+| Print the channel count from STREAMINFO (one integer)
+
+| `--show-bps`
+| Print the bits-per-sample value from STREAMINFO (one integer)
+
+| `--show-total-samples`
+| Print the total sample count from STREAMINFO (one integer)
+
+| `--show-vendor-tag`
+| Print the Vorbis comment vendor string
+
+| `--show-tag=NAME`
+| Print all values for the named tag field; equivalent to `tags list --tag NAME`
+
+| `--show-all-tags`
+| Print all Vorbis comment tags; equivalent to `tags list`
 |===
 
-See xref:migration.adoc[Migration from metaflac] for a complete mapping and known differences.
+=== Tag Write Operations
+
+[cols="3,4", options="header"]
+|===
+| Legacy Flag | Description
+
+| `--set-tag=KEY=VALUE`
+| Set a tag; equivalent to `tags set <file> KEY=VALUE`
+
+| `--remove-tag=KEY`
+| Remove all values for a tag key; equivalent to `tags remove <file> KEY`
+
+| `--remove-first-tag=FIELD`
+| Remove only the first matching entry for FIELD; equivalent to `tags remove --first <file> FIELD`
+
+| `--remove-all-tags`
+| Remove all Vorbis comment tags; equivalent to `tags clear`
+
+| `--remove-all-tags-except=NAME1[=NAME2[=...]]`
+| Remove all tags except the named fields. Uses `metaflac`'s `=` separator inside the value (e.g. `--remove-all-tags-except=TITLE=ARTIST=ALBUM`)
+
+| `--remove-replay-gain`
+| Remove all `REPLAYGAIN_*` tags (see <<non-goals>>)
+
+| `--set-tag-from-file=FIELD=FILE`
+| Read the tag value from FILE and set it; equivalent to `tags set --from-file FIELD=FILE`
+
+| `--export-tags-to=FILE`
+| Export Vorbis comments to FILE; use `-` for stdout. Equivalent to `tags export --output=FILE`
+
+| `--import-tags-from=FILE`
+| Import tags from FILE (one `KEY=VALUE` per line); equivalent to `tags import --from=FILE`
+|===
+
+=== Picture Operations
+
+[cols="3,4", options="header"]
+|===
+| Legacy Flag | Description
+
+| `--export-picture-to=FILE`
+| Export the first embedded picture to FILE; equivalent to `picture export --output=FILE`
+
+| `--import-picture-from=FILE`
+| Import an image file as an embedded picture block; equivalent to `picture add --file=FILE`
+|===
 
 == Global Options
 
-These options can be used with any command:
+These options are accepted by both the modern subcommand path and the legacy flag path.
 
-[cols="2,3", options="header"]
+[cols="2,4", options="header"]
 |===
 | Option | Description
 
@@ -216,7 +282,19 @@ These options can be used with any command:
 | Restore the file's original modification time after writing
 
 | `--with-filename`
-| Include the filename in output
+| Include the filename as a prefix in output lines
+
+| `--no-filename`
+| Suppress the filename prefix even when processing multiple files; overrides `--with-filename`
+
+| `-o FILE`, `--output-name=FILE`
+| Write output to FILE rather than modifying the input file in place; the original file is left untouched
+
+| `--no-utf8-convert`
+| Accepted for `metaflac` compatibility; has no effect. Dart strings are UTF-16 internally and are converted at serialisation boundaries automatically.
+
+| `--dont-use-padding`
+| Disable padding reuse and force a full file rewrite for every change, regardless of whether the modified metadata would fit within the existing padding region
 |===
 
 == Exit Codes
@@ -286,3 +364,16 @@ When `--json` is used, all commands produce structured JSON output.
   "mutations": [...]
 }
 ----
+
+[#non-goals]
+== Non-Goals
+
+=== ReplayGain Analysis (`--add-replay-gain`, `--scan-replay-gain`)
+
+`--add-replay-gain` and `--scan-replay-gain` are permanently out of scope.
+Computing ReplayGain values requires decoding and analysing PCM audio frames.
+{project-name} is a metadata-only library and does not decode audio data; implementing these flags would require pulling in an audio decoding dependency that is incompatible with the library's design goal of having no native-code or platform-specific dependencies.
+
+See link:https://github.com/bovinemagnet/dart-metaflac/issues/19[issue #19] for the canonical rationale.
+
+NOTE: `--remove-replay-gain` *is* supported because it only removes tag fields by name — no audio decoding is involved.

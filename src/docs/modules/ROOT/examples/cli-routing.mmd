@@ -1,4 +1,5 @@
 %% dart-metaflac CLI command routing
+%% Legacy flag categories group ~35 flags; see cli-reference.adoc for the full list.
 flowchart TD
     START(["dart run bin/metaflac.dart &lt;args&gt;"])
 
@@ -18,8 +19,11 @@ flowchart TD
         RUNNER --> PADDING
     end
 
-    subgraph LEGACY["Legacy flag path"]
-        FLAGS["Legacy flag parser\n--list · --show-md5 · --set-tag\n--remove-tag · --export-tags-to\n--import-tags-from · --export-picture-to\n--import-picture-from"]
+    subgraph LEGACY["Legacy flag path (~35 flags total — see cli-reference.adoc)"]
+        SHOWOPS["List &amp; show-ops\n--list · --show-md5sum · --show-sample-rate\n--show-channels · --show-bps · ... (13 flags)"]
+        TAGOPS["Tag ops\n--set-tag · --remove-tag · --remove-replay-gain\n--remove-all-tags-except · --import-tags-from · ... (9 flags)"]
+        PICOPS["Picture ops\n--import-picture-from · --export-picture-to"]
+        GLOBALOPTS["Global options\n-o/--output-name · --preserve-modtime\n--dont-use-padding · --no-utf8-convert · ... (10 flags)"]
     end
 
     EXECUTE["Execute mutations /\nread operations"]
@@ -28,13 +32,19 @@ flowchart TD
 
     START --> DETECT
     DETECT -- Yes --> RUNNER
-    DETECT -- No  --> FLAGS
+    DETECT -- No  --> SHOWOPS
+    DETECT -- No  --> TAGOPS
+    DETECT -- No  --> PICOPS
+    DETECT -- No  --> GLOBALOPTS
 
     INSPECT  --> EXECUTE
     BLOCKS   --> EXECUTE
     TAGS     --> EXECUTE
     PICTURE  --> EXECUTE
     PADDING  --> EXECUTE
-    FLAGS    --> EXECUTE
+    SHOWOPS  --> EXECUTE
+    TAGOPS   --> EXECUTE
+    PICOPS   --> EXECUTE
+    GLOBALOPTS --> EXECUTE
 
     EXECUTE --> OUTPUT
