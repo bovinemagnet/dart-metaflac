@@ -24,7 +24,7 @@
 /// environments, use the in-memory APIs from the core library
 /// ([FlacMetadataDocument.readFromBytes], [FlacMetadataDocument.toBytes])
 /// instead.
-library dart_metaflac.io;
+library;
 
 export 'src/io/atomic_writer.dart';
 export 'src/io/flac_file_editor.dart';

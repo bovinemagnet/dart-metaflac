@@ -1,9 +1,38 @@
-# Files that should NOT be included in the pub.dev package tarball,
-# but should remain in the git repository for contributors.
+# Files that should NOT be included in the pub.dev package tarball.
+#
+# Pub uses this file *instead of* .gitignore when present, so every
+# pattern that matters must be listed here explicitly. See
+# https://dart.dev/tools/pub/publishing#pubignore
 
-# The top-level `docs/` directory holds design specs, PRDs, and
-# internal planning notes. Pub's package-layout convention reserves
-# `doc/` (singular) for user-facing API docs, and warns about any
-# plural `docs/` directory. Excluding it keeps the published tarball
-# small and avoids the warning.
+# --- Build output and caches ---
+.dart_tool/
+build/
+target/
+doc/api/
+
+# --- Internal design and planning docs ---
+# The `doc/` directory holds technical notes (AUDIO-INTEGRITY.md,
+# MIGRATION.md) that are linked from the README and the Antora docs
+# site; they are not needed inside the pub tarball.
+# The `docs/` directory holds design specs, PRDs, and internal
+# planning notes, and also triggers a pub layout warning because
+# pub reserves the singular `doc/` for user docs.
+doc/
 docs/
+
+# --- Developer-only test media ---
+# Real-FLAC and WAV fixtures used by test/real_flac_test.dart.
+# Not referenced by anything under lib/, bin/, or example/, so they
+# do not belong in the published package.
+flac/
+wav/
+
+# --- Internal tooling instructions for agentic coding assistants ---
+CLAUDE.md
+
+# --- Editor and OS metadata ---
+.idea/
+.vscode/
+.DS_Store
+.env*
+

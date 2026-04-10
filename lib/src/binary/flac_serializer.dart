@@ -30,8 +30,8 @@ class FlacSerializer {
 
   /// Serialise only the metadata region (fLaC marker + metadata blocks).
   ///
-  /// Unlike [serialize], no audio data is appended. This is used by
-  /// [StreamRewriter] where audio is streamed separately.
+  /// Unlike [serialize], no audio data is appended. This is used by the
+  /// internal stream rewriter, where audio is streamed separately.
   static Uint8List serializeMetadataOnly(List<FlacMetadataBlock> blocks) {
     return _serializeBlocks(blocks).toBytes();
   }

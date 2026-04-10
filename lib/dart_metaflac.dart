@@ -40,7 +40,7 @@
 /// });
 /// final newBytes = updated.toBytes();
 /// ```
-library dart_metaflac;
+library;
 
 // Error types
 export 'src/error/exceptions.dart';
