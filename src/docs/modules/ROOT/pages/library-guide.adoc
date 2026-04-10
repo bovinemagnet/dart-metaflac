@@ -262,8 +262,19 @@ final result = await transformFlac(
 
 == File I/O
 
-The `io` module provides file-based operations using `dart:io`.
-This is available on Dart CLI, Flutter mobile, and Flutter desktop -- but not Flutter Web.
+The `io` library entry point provides file-based operations using `dart:io`.
+It is available on Dart CLI, Flutter mobile, and Flutter desktop -- but not Flutter Web.
+
+Import it alongside the core library:
+
+[source,dart]
+----
+import 'package:dart_metaflac/dart_metaflac.dart'; // <1>
+import 'package:dart_metaflac/io.dart';            // <2>
+----
+<1> Core library -- no `dart:io` dependency; safe for all platforms including Flutter Web.
+<2> File/IO layer -- exports `FlacFileEditor`, `AtomicWriter`, `FlacWriteOptions`, and `ModTimePreserver`.
+    Only usable where `dart:io` is available.
 
 === Reading a File
 

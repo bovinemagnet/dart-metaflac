@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/io.dart';
 
 import '../base_command.dart';
 
@@ -89,6 +90,7 @@ class PaddingSetCommand extends BaseFlacCommand {
   @override
   String get description => 'Set padding size in bytes';
 
+  /// Applies a [SetPadding] mutation with the byte size given as a positional argument.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;
@@ -122,6 +124,7 @@ class PaddingRemoveCommand extends BaseFlacCommand {
   @override
   String get description => 'Remove all padding';
 
+  /// Applies a [SetPadding] of zero bytes, effectively stripping all padding.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;

@@ -13,6 +13,7 @@ class InspectCommand extends BaseFlacCommand {
   @override
   String get description => 'List all metadata blocks (equivalent to --list)';
 
+  /// Reads and prints all metadata blocks for each input file.
   @override
   Future<int> run() async {
     final files = filePaths;

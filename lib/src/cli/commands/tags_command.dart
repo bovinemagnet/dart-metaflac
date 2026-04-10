@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/io.dart';
 
 import '../base_command.dart';
 
@@ -32,6 +33,7 @@ class TagsListCommand extends BaseFlacCommand {
   @override
   String get description => 'List Vorbis comment tags';
 
+  /// Prints all Vorbis comment entries for each input file.
   @override
   Future<int> run() async {
     final files = filePaths;
@@ -176,6 +178,7 @@ class TagsSetCommand extends BaseFlacCommand {
   @override
   String get description => 'Set tags (KEY=VALUE)';
 
+  /// Replaces all existing values for each supplied key with the new value(s).
   @override
   Future<int> run() async {
     final rest = argResults!.rest;
@@ -213,6 +216,7 @@ class TagsAddCommand extends BaseFlacCommand {
   @override
   String get description => 'Add a tag value (preserves existing)';
 
+  /// Appends each KEY=VALUE pair without removing pre-existing values.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;
@@ -245,6 +249,7 @@ class TagsRemoveCommand extends BaseFlacCommand {
   @override
   String get description => 'Remove all values for a tag key';
 
+  /// Deletes every occurrence of each named tag key.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;
@@ -276,6 +281,7 @@ class TagsClearCommand extends BaseFlacCommand {
   @override
   String get description => 'Remove all Vorbis comment tags';
 
+  /// Drops the entire Vorbis comment block from the file.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;
@@ -303,6 +309,7 @@ class TagsImportCommand extends BaseFlacCommand {
   @override
   String get description => 'Import tags from a text file';
 
+  /// Reads KEY=VALUE lines from `--from` and adds them to the FLAC file.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;
@@ -358,6 +365,7 @@ class TagsExportCommand extends BaseFlacCommand {
   @override
   String get description => 'Export tags to file or stdout';
 
+  /// Writes Vorbis comments as KEY=VALUE lines to `--output` or stdout.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;

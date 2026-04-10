@@ -7,6 +7,7 @@ library;
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/io.dart';
 
 Future<void> main() async {
   // Create a temporary FLAC file to work with.

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:test/test.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/io.dart';
 import 'test_fixtures.dart';
 
 VorbisCommentBlock _makeVorbisBlock(Map<String, List<String>> tags) {

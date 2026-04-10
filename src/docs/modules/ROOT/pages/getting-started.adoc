@@ -95,11 +95,14 @@ final updated = doc.edit((editor) {
 
 === File-Based Editing
 
-For Dart CLI and Flutter non-web platforms, you can read and write files directly:
+For Dart CLI and Flutter non-web platforms, you can read and write files directly.
+File I/O types (`FlacFileEditor`, `AtomicWriter`, `FlacWriteOptions`, `ModTimePreserver`) live in a
+dedicated library entry point that requires `dart:io`:
 
 [source,dart]
 ----
-import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/dart_metaflac.dart'; // <1>
+import 'package:dart_metaflac/io.dart';            // <2>
 
 // Read a FLAC file
 final doc = await FlacFileEditor.readFile('song.flac');
@@ -113,6 +116,9 @@ await FlacFileEditor.updateFile(
   ],
 );
 ----
+<1> Core library -- no `dart:io` dependency; safe for Flutter Web and all other platforms.
+<2> File/IO layer -- exports `FlacFileEditor`, `AtomicWriter`, `FlacWriteOptions`, and `ModTimePreserver`.
+    Only usable where `dart:io` is available (Dart CLI, Flutter mobile, Flutter desktop).
 
 See xref:library-guide.adoc[Library Guide] for full API coverage including streaming transforms, write modes, and padding control.
 

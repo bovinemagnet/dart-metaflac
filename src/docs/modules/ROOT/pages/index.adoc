@@ -19,23 +19,30 @@ It has no `dart:io` dependency in the core, making it suitable for Dart, Flutter
 
 == Platform Support
 
-Because the core library avoids `dart:io`, it runs anywhere Dart runs:
+The library has two entry points with different platform availability:
 
-[cols="1,2", options="header"]
+* `package:dart_metaflac/dart_metaflac.dart` -- core; no `dart:io`; available on all platforms.
+* `package:dart_metaflac/io.dart` -- file/IO layer; requires `dart:io`; not available on Flutter Web.
+
+[cols="1,1,1", options="header"]
 |===
-| Platform | Support
+| Platform | `dart_metaflac.dart` | `io.dart`
 
 | Dart CLI
-| Full support (library + CLI + file I/O)
+| Yes (full support)
+| Yes (file I/O + CLI)
 
 | Flutter Mobile
-| Library and file I/O (no CLI)
+| Yes
+| Yes (file I/O)
 
 | Flutter Web
-| Library only (bytes and streams)
+| Yes (bytes and streams)
+| No
 
 | Flutter Desktop
-| Library and file I/O (no CLI)
+| Yes
+| Yes (file I/O)
 |===
 
 == Quick Links

@@ -65,6 +65,22 @@ This guide maps commands from the reference `metaflac` CLI tool to their equival
 | `--no-utf8-convert`
 |===
 
+== Import Setup
+
+The core Dart API lives in `package:dart_metaflac/dart_metaflac.dart`.
+File-based operations (`FlacFileEditor`, `AtomicWriter`, `FlacWriteOptions`, `ModTimePreserver`) require a second import:
+
+[source,dart]
+----
+import 'package:dart_metaflac/dart_metaflac.dart'; // <1>
+import 'package:dart_metaflac/io.dart';            // <2>
+----
+<1> Core library -- always required.
+<2> File/IO layer -- only needed when calling `FlacFileEditor` or related types; requires `dart:io`.
+
+NOTE: `package:dart_metaflac/io.dart` is not available on Flutter Web.
+Use the in-memory `FlacMetadataDocument.readFromBytes` / `toBytes` approach there instead.
+
 == Dart API Equivalents
 
 [cols="2,3", options="header"]

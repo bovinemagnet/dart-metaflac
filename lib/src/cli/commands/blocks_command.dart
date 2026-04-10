@@ -26,6 +26,7 @@ class BlocksListCommand extends BaseFlacCommand {
   @override
   String get description => 'List all metadata blocks with types and sizes';
 
+  /// Lists all metadata blocks with their type names, codes, and payload sizes.
   @override
   Future<int> run() async {
     final files = filePaths;

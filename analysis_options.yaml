@@ -1,1 +1,8 @@
 include: package:lints/recommended.yaml
+
+analyzer:
+  exclude:
+    # The Flutter example is a standalone sub-project with its own
+    # pubspec.yaml and Flutter SDK dependency; it should be analysed
+    # from within its own directory, not as part of the root package.
+    - example/flutter_example/**

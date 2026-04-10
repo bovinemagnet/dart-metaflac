@@ -195,13 +195,37 @@ Typed exception hierarchy for precise error handling.
 | In-place write mode was used but metadata does not fit
 |===
 
+== Public Library Entry Points
+
+The library exposes two separate Dart library files:
+
+`package:dart_metaflac/dart_metaflac.dart`::
+The core entry point.
+Exports all types from the `model`, `binary`, `edit`, `transform`, `api`, and `error` layers.
+Has no `dart:io` dependency -- safe for Flutter Web, WASM, isolates, and server environments.
+
+`package:dart_metaflac/io.dart`::
+The file/IO entry point.
+Exports `FlacFileEditor`, `AtomicWriter`, `FlacWriteOptions`, and `ModTimePreserver` from the `io` layer.
+Requires `dart:io` and is only usable on platforms where that is available: Dart CLI, Flutter mobile, and Flutter desktop.
+
+Both libraries are used together for file-based workflows:
+
+[source,dart]
+----
+import 'package:dart_metaflac/dart_metaflac.dart'; // <1>
+import 'package:dart_metaflac/io.dart';            // <2>
+----
+<1> Always import the core library for document, mutation, and transform types.
+<2> Add this import only when `dart:io` is available.
+
 == Design Decisions
 
 === I/O-Agnostic Core
 
 The core library (`model`, `binary`, `edit`, `transform`, `api`) operates on `Uint8List` and `Stream<List<int>>` only.
 This means it works in environments where `dart:io` is unavailable, such as Flutter Web.
-File operations are isolated in the `io` module.
+File operations are isolated in the `io` module and exposed through the dedicated `package:dart_metaflac/io.dart` entry point.
 
 === Immutable Models
 

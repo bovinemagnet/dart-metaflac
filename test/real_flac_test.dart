@@ -9,6 +9,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/io.dart';
 import 'package:dart_metaflac/src/transform/stream_rewriter.dart';
 import 'package:test/test.dart';
 

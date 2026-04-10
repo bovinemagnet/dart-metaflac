@@ -1,8 +1,12 @@
 /// A pure Dart library for reading and writing FLAC audio metadata.
 ///
-/// This library provides complete support for FLAC metadata operations without
-/// depending on `dart:io` in its core, making it suitable for Dart, Flutter,
-/// and web applications.
+/// This library provides complete support for FLAC metadata operations
+/// **without depending on `dart:io`**, making it suitable for Dart, Flutter
+/// (including Flutter Web and WASM), server isolates, and browser use cases.
+///
+/// File-based APIs that need `dart:io` live in a separate entry point:
+/// `package:dart_metaflac/io.dart`. Import both libraries on targets where
+/// `dart:io` is available.
 ///
 /// ## Modules
 ///
@@ -16,8 +20,9 @@
 /// * **transform** — Transform planning and streaming via [FlacTransformer].
 /// * **api** — High-level convenience functions: [readFlacMetadata],
 ///   [readFlacMetadataFromBytes], [applyMutations], and [transformFlac].
-/// * **io** — File persistence adapters using `dart:io`, including
-///   [FlacFileEditor] and [AtomicWriter] for safe file operations.
+///
+/// See also: `package:dart_metaflac/io.dart` for file persistence adapters
+/// (`FlacFileEditor`, `AtomicWriter`, `FlacWriteOptions`, `ModTimePreserver`).
 ///
 /// ## Quick Start
 ///
@@ -79,8 +84,6 @@ export 'src/api/read_api.dart';
 export 'src/api/document_api.dart';
 export 'src/api/transform_api.dart';
 
-// IO
-export 'src/io/atomic_writer.dart';
-export 'src/io/flac_file_editor.dart';
-export 'src/io/flac_write_options.dart';
-export 'src/io/modtime.dart';
+// Note: file/IO adapters (FlacFileEditor, AtomicWriter, FlacWriteOptions,
+// ModTimePreserver) are deliberately NOT exported here. They depend on
+// `dart:io` and live in `package:dart_metaflac/io.dart`.

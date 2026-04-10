@@ -1,0 +1,9 @@
+# Files that should NOT be included in the pub.dev package tarball,
+# but should remain in the git repository for contributors.
+
+# The top-level `docs/` directory holds design specs, PRDs, and
+# internal planning notes. Pub's package-layout convention reserves
+# `doc/` (singular) for user-facing API docs, and warns about any
+# plural `docs/` directory. Excluding it keeps the published tarball
+# small and avoids the warning.
+docs/

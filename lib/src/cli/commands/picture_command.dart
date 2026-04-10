@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:args/command_runner.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/io.dart';
 
 import '../base_command.dart';
 import '../formatters.dart';
@@ -159,6 +160,7 @@ class PictureAddCommand extends BaseFlacCommand {
   @override
   String get description => 'Add a picture to the FLAC file';
 
+  /// Embeds the image supplied via `--file` into the FLAC as a [PictureBlock].
   @override
   Future<int> run() async {
     final rest = argResults!.rest;
@@ -218,6 +220,7 @@ class PictureRemoveCommand extends BaseFlacCommand {
   @override
   String get description => 'Remove pictures from the FLAC file';
 
+  /// Removes pictures matching `--type`, or all pictures when no type is given.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;
@@ -258,6 +261,7 @@ class PictureExportCommand extends BaseFlacCommand {
   @override
   String get description => 'Export a picture from the FLAC file';
 
+  /// Writes picture data to `--output`, deriving the filename from the FLAC path when omitted.
   @override
   Future<int> run() async {
     final rest = argResults!.rest;

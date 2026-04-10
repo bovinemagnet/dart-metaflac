@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/io.dart';
 import 'package:dart_metaflac/src/cli/command_runner.dart';
 
 // ─── Exit codes ───────────────────────────────────────────────────────────────
