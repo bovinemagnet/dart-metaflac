@@ -1,0 +1,40 @@
+%% dart-metaflac CLI command routing
+flowchart TD
+    START(["dart run bin/metaflac.dart &lt;args&gt;"])
+
+    DETECT{"First arg is\nsubcommand?"}
+
+    subgraph MODERN["Modern subcommand path"]
+        RUNNER["MetaflacCommandRunner"]
+        INSPECT["InspectCommand\ninspect"]
+        BLOCKS["BlocksCommand\nblocks list"]
+        TAGS["TagsCommand\ntags list · set · add\nremove · clear · import · export"]
+        PICTURE["PictureCommand\npicture add · remove · export"]
+        PADDING["PaddingCommand\npadding set · remove"]
+        RUNNER --> INSPECT
+        RUNNER --> BLOCKS
+        RUNNER --> TAGS
+        RUNNER --> PICTURE
+        RUNNER --> PADDING
+    end
+
+    subgraph LEGACY["Legacy flag path"]
+        FLAGS["Legacy flag parser\n--list · --show-md5 · --set-tag\n--remove-tag · --export-tags-to\n--import-tags-from · --export-picture-to\n--import-picture-from"]
+    end
+
+    EXECUTE["Execute mutations /\nread operations"]
+
+    OUTPUT(["stdout\n(text or JSON)"])
+
+    START --> DETECT
+    DETECT -- Yes --> RUNNER
+    DETECT -- No  --> FLAGS
+
+    INSPECT  --> EXECUTE
+    BLOCKS   --> EXECUTE
+    TAGS     --> EXECUTE
+    PICTURE  --> EXECUTE
+    PADDING  --> EXECUTE
+    FLAGS    --> EXECUTE
+
+    EXECUTE --> OUTPUT

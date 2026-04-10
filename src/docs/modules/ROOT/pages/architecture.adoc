@@ -1,0 +1,248 @@
+= Architecture
+Paul Snow
+:description: Module structure and design decisions of the dart_metaflac library
+
+include::_attributes.adoc[]
+
+{project-name} is organised into layered modules with clear boundaries.
+The core library has no `dart:io` dependency, making it usable in Flutter Web and server environments.
+
+== Module Layers
+
+[{MERMAID}]
+....
+include::{examplesdir}/architecture-layers.mmd[]
+....
+
+=== Binary Layer (`lib/src/binary/`)
+
+Low-level parsing and serialisation of FLAC byte structures.
+
+[cols="1,3", options="header"]
+|===
+| Type | Responsibility
+
+| `FlacParser`
+| Reads FLAC bytes into typed metadata blocks and identifies the audio data offset
+
+| `FlacSerializer`
+| Writes metadata blocks back to bytes with correct headers and last-block flags
+
+| `ByteReader`
+| Reads big-endian and little-endian integers from a byte buffer
+
+| `ByteWriter`
+| Writes big-endian and little-endian integers to a byte buffer
+
+| `FlacConstants`
+| Magic number (`fLaC`), block type codes, and header sizes
+
+| `FlacBlockHeader`
+| Parses and represents the 4-byte metadata block header
+|===
+
+=== Model Layer (`lib/src/model/`)
+
+Immutable domain objects representing FLAC metadata.
+All types are `final class` with `const` constructors.
+
+[cols="1,3", options="header"]
+|===
+| Type | Responsibility
+
+| `FlacMetadataDocument`
+| Container holding a list of metadata blocks, audio data offset, and source bytes.
+  Entry point for parsing (`readFromBytes`, `readFromStream`) and editing (`edit`).
+
+| `StreamInfoBlock`
+| Mandatory block with sample rate, channel count, bits per sample, total samples, and MD5 signature
+
+| `VorbisCommentBlock`
+| Wrapper around `VorbisComments` with serialisation support
+
+| `VorbisComments`
+| Ordered list of `VorbisCommentEntry` pairs plus vendor string.
+  Supports `valuesOf`, `set`, `add`, `removeKey`, `removeExact`, `clear`, and `asMultiMap`.
+
+| `PictureBlock`
+| Embedded image with type, MIME, description, dimensions, and raw data
+
+| `PaddingBlock`
+| Reserved space for future metadata edits without full rewrites
+
+| `SeekTableBlock`
+| Seek points for faster random access within audio
+
+| `ApplicationBlock`
+| Third-party application data identified by a 4-byte application ID
+
+| `CueSheetBlock`
+| CD-style cue sheet data
+
+| `UnknownBlock`
+| Preserves unrecognised block types as raw bytes for round-trip safety
+|===
+
+=== Edit Layer (`lib/src/edit/`)
+
+Accumulates mutations and produces updated documents.
+
+[cols="1,3", options="header"]
+|===
+| Type | Responsibility
+
+| `FlacMetadataEditor`
+| Receives mutation calls (`setTag`, `addPicture`, `setPadding`, etc.) and builds a new `FlacMetadataDocument`
+
+| `MetadataMutation`
+| Sealed class hierarchy representing all possible mutations (`SetTag`, `AddTag`, `RemoveTag`, `ClearTags`, `AddPicture`, `RemovePictureByType`, `RemoveAllPictures`, `SetPadding`)
+
+| `PaddingStrategy`
+| Determines whether an edit fits within existing padding (in-place) or requires a full rewrite
+|===
+
+=== Transform Layer (`lib/src/transform/`)
+
+Orchestrates the process of reading, mutating, and writing FLAC data.
+
+[cols="1,3", options="header"]
+|===
+| Type | Responsibility
+
+| `FlacTransformer`
+| Supports both in-memory (`transform`) and streaming (`transformStream`) transforms.
+  Created via `fromBytes` or `fromStream`.
+
+| `StreamRewriter`
+| Single-pass streaming transform.
+  Buffers only the metadata region; audio frames are streamed through without being loaded into memory.
+
+| `FlacTransformPlan`
+| Describes the transform: original and transformed block lists, metadata region sizes, whether the edit fits in-place
+
+| `FlacTransformResult`
+| Holds the transformed document, bytes, and plan
+
+| `FlacTransformOptions`
+| Write mode and explicit padding size
+|===
+
+=== API Layer (`lib/src/api/`)
+
+High-level convenience functions that compose the lower layers.
+
+[cols="1,3", options="header"]
+|===
+| Type / Function | Responsibility
+
+| `readFlacMetadata(stream)`
+| Parse a FLAC stream into a `FlacMetadataDocument`
+
+| `readFlacMetadataFromBytes(bytes)`
+| Parse FLAC bytes into a `FlacMetadataDocument` (synchronous)
+
+| `transformFlac(bytes, mutations)`
+| Apply mutations to FLAC bytes and return a `FlacTransformResult`
+|===
+
+=== IO Layer (`lib/src/io/`)
+
+File persistence adapters using `dart:io`.
+This is the only module that depends on `dart:io`.
+
+[cols="1,3", options="header"]
+|===
+| Type | Responsibility
+
+| `FlacFileEditor`
+| High-level file read/write.
+  `readFile(path)` parses a file; `updateFile(path, mutations:)` applies mutations with configurable write modes.
+
+| `AtomicWriter`
+| Writes to a temporary file, then renames it over the target -- ensuring the target is never partially overwritten
+
+| `ModTimePreserver`
+| Captures and restores file modification times
+
+| `FlacWriteOptions`
+| Configuration: write mode, output path, preserve mod time, explicit padding size
+
+| `WriteMode`
+| Enum: `safeAtomic`, `outputToNewFile`, `inPlaceIfPossible`, `auto`
+|===
+
+=== Error Layer (`lib/src/error/`)
+
+Typed exception hierarchy for precise error handling.
+
+[cols="1,3", options="header"]
+|===
+| Exception | When Thrown
+
+| `FlacMetadataException`
+| Base class for all library exceptions
+
+| `InvalidFlacException`
+| Input is not a valid FLAC file
+
+| `MalformedMetadataException`
+| A metadata block has invalid structure
+
+| `FlacIoException`
+| File read or write failed
+
+| `WriteConflictException`
+| In-place write mode was used but metadata does not fit
+|===
+
+== Design Decisions
+
+=== I/O-Agnostic Core
+
+The core library (`model`, `binary`, `edit`, `transform`, `api`) operates on `Uint8List` and `Stream<List<int>>` only.
+This means it works in environments where `dart:io` is unavailable, such as Flutter Web.
+File operations are isolated in the `io` module.
+
+=== Immutable Models
+
+All domain objects are immutable.
+Edits return new instances rather than mutating in place.
+This prevents accidental data corruption and makes the library safe for concurrent use.
+
+=== VorbisComments Preserves Order and Duplicates
+
+The Vorbis specification allows multiple entries with the same key and does not define ordering.
+{project-name} preserves both insertion order and duplicate keys, matching the behaviour of the reference `metaflac` tool.
+
+=== Unknown Blocks Are Preserved
+
+When the library encounters a metadata block type it does not recognise (type codes 7-126), it stores the raw bytes as an `UnknownBlock`.
+During serialisation, these blocks are written back unchanged.
+This ensures the library does not silently discard data from future FLAC extensions.
+
+=== Padding Strategy
+
+The library uses padding blocks to avoid full file rewrites when possible:
+
+1. If the edited metadata fits within the existing metadata region (including padding), only the metadata bytes are rewritten.
+   The padding block absorbs the size difference.
+2. If the edited metadata exceeds the available space, a full rewrite is performed: new metadata is serialised, then the original audio bytes are copied verbatim.
+
+In both cases, audio data is never parsed or modified.
+See xref:audio-integrity.adoc[Audio Integrity] for how this is verified.
+
+== CLI Architecture
+
+The CLI (`bin/metaflac.dart`) supports two routing modes:
+
+1. **Modern subcommands** -- when the first argument is a known subcommand (`inspect`, `blocks`, `tags`, `picture`, `padding`), the `MetaflacCommandRunner` handles routing.
+2. **Legacy flags** -- when the first argument starts with `--`, the legacy `ArgParser` handles `metaflac`-compatible flags.
+
+Both paths converge on the same mutation and transform APIs.
+
+The CLI internals live in `lib/src/cli/`:
+
+* `BaseFlacCommand` -- shared options (`--json`, `--dry-run`, `--quiet`, `--preserve-modtime`, `--with-filename`)
+* `MetaflacCommandRunner` -- subcommand routing
+* `commands/` -- individual command implementations
+* `formatters.dart` -- output formatting helpers

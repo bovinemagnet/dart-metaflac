@@ -1,0 +1,101 @@
+= dart_metaflac
+Paul Snow
+:description: A pure Dart library and CLI tool for reading and writing FLAC audio metadata
+
+include::_attributes.adoc[]
+
+{project-name} is a pure Dart library for reading and writing FLAC audio metadata.
+It has no `dart:io` dependency in the core, making it suitable for Dart, Flutter, and web applications.
+
+== Features
+
+* **Parse** FLAC metadata from bytes or streams
+* **Read** Vorbis comments, stream info, pictures, padding, and all block types
+* **Edit** tags, pictures, and padding with an immutable document model
+* **Transform** FLAC files in-memory or via memory-efficient streaming
+* **File I/O** with atomic writes (temp file + rename) for safe updates
+* **CLI tool** with modern subcommands and `metaflac`-compatible flags
+* **Round-trip safe** -- unknown block types are preserved as-is
+
+== Platform Support
+
+Because the core library avoids `dart:io`, it runs anywhere Dart runs:
+
+[cols="1,2", options="header"]
+|===
+| Platform | Support
+
+| Dart CLI
+| Full support (library + CLI + file I/O)
+
+| Flutter Mobile
+| Library and file I/O (no CLI)
+
+| Flutter Web
+| Library only (bytes and streams)
+
+| Flutter Desktop
+| Library and file I/O (no CLI)
+|===
+
+== Quick Links
+
+[cols="1,3"]
+|===
+| xref:getting-started.adoc[Getting Started]
+| Install the package and run your first example
+
+| xref:cli-reference.adoc[CLI Reference]
+| Complete command reference for the `metaflac` CLI tool
+
+| xref:library-guide.adoc[Library Guide]
+| Using {project-name} as a Dart library in your project
+
+| xref:architecture.adoc[Architecture]
+| Layered module structure and design decisions
+
+| xref:audio-integrity.adoc[Audio Integrity]
+| How the library ensures metadata edits never corrupt audio data
+
+| xref:migration.adoc[Migration from metaflac]
+| Mapping reference `metaflac` commands to {project-name}
+|===
+
+== Module Overview
+
+The library is organised into layered modules, each with a clear responsibility:
+
+[cols="1,2,2", options="header"]
+|===
+| Module | Responsibility | Key Types
+
+| `model`
+| Immutable domain objects
+| `FlacMetadataDocument`, `VorbisComments`, `StreamInfoBlock`, `PictureBlock`
+
+| `binary`
+| Low-level parsing and serialisation
+| `FlacParser`, `FlacSerializer`, `ByteReader`, `ByteWriter`
+
+| `edit`
+| Mutation operations
+| `FlacMetadataEditor`, `MetadataMutation`, `PaddingStrategy`
+
+| `transform`
+| Transform planning and streaming
+| `FlacTransformer`, `StreamRewriter`, `FlacTransformPlan`
+
+| `api`
+| High-level convenience functions
+| `readFlacMetadata`, `readFlacMetadataFromBytes`, `transformFlac`
+
+| `io`
+| File persistence (uses `dart:io`)
+| `FlacFileEditor`, `AtomicWriter`, `ModTimePreserver`
+
+| `error`
+| Typed exception hierarchy
+| `FlacMetadataException`, `InvalidFlacException`, `FlacIoException`
+|===
+
+See xref:architecture.adoc[Architecture] for a detailed breakdown of the module structure and design decisions.

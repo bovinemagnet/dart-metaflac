@@ -1,0 +1,41 @@
+:project-name: dart_metaflac
+:project-version: 0.0.0
+:dart-version: 3
+:author: Paul Snow
+:icons: font
+:source-highlighter: highlight.js
+:toc: left
+:toclevels: 3
+
+// Mermaid diagram attribute
+ifdef::env-github[]
+:MERMAID: source, mermaid, svg
+endif::[]
+ifndef::env-github[]
+:MERMAID: mermaid, svg
+endif::[]
+
+:icons: font
+
+ifndef::site-gen-antora[]
+
+ifndef::attachmentsdir[:attachmentsdir: {moduledir}/attachments/]
+ifndef::examplesdir[:examplesdir: {moduledir}/examples/]
+ifndef::imagesdir[:imagesdir: {moduledir}/images/]
+ifndef::partialsdir[:partialsdir: {moduledir}/partials/]
+ifndef::pagesdir[:pagesdir: {moduledir}/pages/]
+ifndef::intpagesdir[:intpagesdir: {moduledir}/pages/]
+
+endif::[]
+
+// Antora site generator
+ifdef::site-gen-antora[]
+
+ifndef::attachmentsdir[:attachmentsdir: attachment$]
+ifndef::examplesdir[:examplesdir: example$]
+ifndef::imagesdir[:imagesdir: image$]
+ifndef::partialsdir[:partialsdir: partial$]
+ifndef::pagesdir[:pagesdir: page$]
+ifndef::intpagesdir[:intpagesdir: integration:page$]
+
+endif::[]

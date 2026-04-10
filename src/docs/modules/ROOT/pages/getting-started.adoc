@@ -1,0 +1,142 @@
+= Getting Started
+Paul Snow
+:description: How to install dart_metaflac and use it for the first time
+
+include::_attributes.adoc[]
+
+This page describes how to add {project-name} to a Dart or Flutter project and begin using it to read and write FLAC metadata.
+
+== Installation
+
+=== As a Library Dependency
+
+Add the library to your `pubspec.yaml`:
+
+[source,yaml]
+----
+dependencies:
+  dart_metaflac: ^0.1.0
+----
+
+Or install via the command line:
+
+[source,bash]
+----
+dart pub add dart_metaflac
+----
+
+=== As a CLI Tool
+
+Run the CLI directly from the repository:
+
+[source,bash]
+----
+dart run bin/metaflac.dart <command> [options] <file.flac>
+----
+
+== Quick Examples
+
+=== Reading Metadata
+
+[source,dart]
+----
+import 'package:dart_metaflac/dart_metaflac.dart';
+
+// Parse FLAC from bytes (works everywhere, including Flutter Web)
+final doc = FlacMetadataDocument.readFromBytes(flacBytes);
+
+// Stream info
+final info = doc.streamInfo;
+print('Sample rate: ${info.sampleRate}');
+print('Channels: ${info.channelCount}');
+print('Bits per sample: ${info.bitsPerSample}');
+
+// Vorbis comments (tags)
+final comments = doc.vorbisComment?.comments;
+print('Artist: ${comments?.valuesOf('ARTIST')}');
+print('Title: ${comments?.valuesOf('TITLE')}');
+----
+
+=== Editing Tags
+
+[source,dart]
+----
+final updated = doc.edit((editor) {
+  editor.setTag('ARTIST', ['New Artist']);
+  editor.setTag('ALBUM', ['New Album']);
+  editor.addTag('GENRE', 'Rock');
+  editor.removeTag('COMMENT');
+});
+final newBytes = updated.toBytes();
+----
+
+IMPORTANT: `setTag` replaces _all_ values for a key.
+Use `addTag` to append a value without removing existing ones.
+
+=== Adding a Picture
+
+[source,dart]
+----
+import 'dart:typed_data';
+
+final updated = doc.edit((editor) {
+  editor.addPicture(PictureBlock(
+    pictureType: PictureType.frontCover,
+    mimeType: 'image/jpeg',
+    description: 'Front cover',
+    width: 500,
+    height: 500,
+    colorDepth: 24,
+    indexedColors: 0,
+    data: jpegBytes,
+  ));
+});
+----
+
+=== File-Based Editing
+
+For Dart CLI and Flutter non-web platforms, you can read and write files directly:
+
+[source,dart]
+----
+import 'package:dart_metaflac/dart_metaflac.dart';
+
+// Read a FLAC file
+final doc = await FlacFileEditor.readFile('song.flac');
+
+// Update the file with atomic writes (safe: writes to temp, then renames)
+await FlacFileEditor.updateFile(
+  'song.flac',
+  mutations: [
+    SetTag('TITLE', ['Updated Title']),
+    AddTag('GENRE', 'Electronic'),
+  ],
+);
+----
+
+See xref:library-guide.adoc[Library Guide] for full API coverage including streaming transforms, write modes, and padding control.
+
+=== CLI Usage
+
+[source,bash]
+----
+# Inspect metadata
+dart run bin/metaflac.dart inspect song.flac
+
+# List tags
+dart run bin/metaflac.dart tags list song.flac
+
+# Set a tag
+dart run bin/metaflac.dart tags set song.flac "ARTIST=New Artist"
+
+# JSON output
+dart run bin/metaflac.dart inspect --json song.flac
+----
+
+See xref:cli-reference.adoc[CLI Reference] for the complete command reference.
+
+== Next Steps
+
+* xref:cli-reference.adoc[CLI Reference] -- Full command reference
+* xref:library-guide.adoc[Library Guide] -- In-depth library usage with all APIs
+* xref:architecture.adoc[Architecture] -- Module structure and design decisions

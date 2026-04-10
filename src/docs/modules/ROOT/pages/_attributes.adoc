@@ -1,0 +1,24 @@
+ifdef::env-vscode,env-browser,env-pdf[]
+
+:moduledir: ..
+
+include::{moduledir}/_attributes.adoc[]
+
+endif::[]
+
+:icons:
+ifdef::env-github[]
+:MERMAID: source, mermaid, svg
+endif::[]
+ifndef::env-github[]
+:MERMAID: mermaid, svg
+endif::[]
+
+ifndef::site-gen-antora[]
+
+ifndef::moduledir[]
+:moduledir: ..
+include::{moduledir}/_attributes.adoc[]
+endif::moduledir[]
+
+endif::site-gen-antora[]

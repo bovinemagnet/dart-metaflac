@@ -1,0 +1,288 @@
+= CLI Reference
+Paul Snow
+:description: Complete command reference for the dart_metaflac CLI tool
+
+include::_attributes.adoc[]
+
+The {project-name} CLI supports both modern subcommands and `metaflac`-compatible flags.
+The CLI detects whether the first argument is a subcommand or a legacy flag and routes accordingly.
+
+[{MERMAID}]
+....
+include::{examplesdir}/cli-routing.mmd[]
+....
+
+== Running the CLI
+
+[source,bash]
+----
+dart run bin/metaflac.dart <command> [options] <file.flac> [file2.flac ...]
+----
+
+Multiple files can be specified; each is processed in order.
+
+== Modern Subcommands
+
+=== inspect
+
+Display a summary of all metadata in a FLAC file.
+
+[source,bash]
+----
+dart run bin/metaflac.dart inspect song.flac
+dart run bin/metaflac.dart inspect --json song.flac
+----
+
+=== blocks list
+
+List all metadata blocks with their types and sizes.
+
+[source,bash]
+----
+dart run bin/metaflac.dart blocks list song.flac
+dart run bin/metaflac.dart blocks list --json song.flac
+----
+
+=== tags list
+
+List all Vorbis comment tags.
+
+[source,bash]
+----
+dart run bin/metaflac.dart tags list song.flac
+dart run bin/metaflac.dart tags list --json song.flac
+----
+
+=== tags set
+
+Set a tag value, replacing any existing values for that key.
+
+[source,bash]
+----
+dart run bin/metaflac.dart tags set song.flac "ARTIST=New Artist"
+dart run bin/metaflac.dart tags set song.flac "ARTIST=New Artist" "ALBUM=New Album"
+----
+
+=== tags add
+
+Add a tag value without removing existing values for the key.
+
+[source,bash]
+----
+dart run bin/metaflac.dart tags add song.flac "GENRE=Rock"
+----
+
+=== tags remove
+
+Remove all values for a tag key.
+
+[source,bash]
+----
+dart run bin/metaflac.dart tags remove song.flac "ARTIST"
+----
+
+=== tags clear
+
+Remove all Vorbis comment tags.
+
+[source,bash]
+----
+dart run bin/metaflac.dart tags clear song.flac
+----
+
+=== tags import
+
+Import tags from a text file (one `KEY=VALUE` per line).
+
+[source,bash]
+----
+dart run bin/metaflac.dart tags import --from=tags.txt song.flac
+----
+
+=== tags export
+
+Export tags to stdout or a file.
+
+[source,bash]
+----
+dart run bin/metaflac.dart tags export song.flac
+dart run bin/metaflac.dart tags export --output=tags.txt song.flac
+----
+
+=== picture add
+
+Add an image file as an embedded picture block.
+
+[source,bash]
+----
+dart run bin/metaflac.dart picture add --file=cover.jpg song.flac
+----
+
+=== picture remove
+
+Remove picture blocks.
+
+[source,bash]
+----
+dart run bin/metaflac.dart picture remove --all song.flac
+----
+
+=== picture export
+
+Export an embedded picture to a file.
+
+[source,bash]
+----
+dart run bin/metaflac.dart picture export --output=cover.jpg song.flac
+----
+
+=== padding set
+
+Set the padding block to a specific size in bytes.
+
+[source,bash]
+----
+dart run bin/metaflac.dart padding set song.flac 4096
+----
+
+=== padding remove
+
+Remove all padding blocks.
+
+[source,bash]
+----
+dart run bin/metaflac.dart padding remove song.flac
+----
+
+== Compatibility Flags
+
+For users migrating from the reference `metaflac` tool, legacy flags are supported:
+
+[cols="2,2", options="header"]
+|===
+| Legacy Flag | Equivalent Subcommand
+
+| `--list`
+| `blocks list`
+
+| `--show-md5`
+| `inspect` (MD5 field)
+
+| `--set-tag=KEY=VALUE`
+| `tags set <file> KEY=VALUE`
+
+| `--remove-tag=KEY`
+| `tags remove <file> KEY`
+
+| `--remove-all-tags`
+| `tags clear`
+
+| `--export-tags-to=FILE`
+| `tags export --output=FILE`
+
+| `--import-tags-from=FILE`
+| `tags import --from=FILE`
+
+| `--export-picture-to=FILE`
+| `picture export --output=FILE`
+
+| `--import-picture-from=FILE`
+| `picture add --file=FILE`
+|===
+
+See xref:migration.adoc[Migration from metaflac] for a complete mapping and known differences.
+
+== Global Options
+
+These options can be used with any command:
+
+[cols="2,3", options="header"]
+|===
+| Option | Description
+
+| `--json`
+| Output results in JSON format
+
+| `--dry-run`
+| Show what changes would be made without writing to the file
+
+| `--continue-on-error`
+| Continue processing remaining files if one fails
+
+| `--quiet`, `-q`
+| Suppress normal output
+
+| `--preserve-modtime`
+| Restore the file's original modification time after writing
+
+| `--with-filename`
+| Include the filename in output
+|===
+
+== Exit Codes
+
+[cols="1,3", options="header"]
+|===
+| Code | Meaning
+
+| 0
+| Success
+
+| 1
+| General error
+
+| 2
+| Invalid arguments
+
+| 3
+| Invalid FLAC file
+
+| 4
+| I/O error
+|===
+
+== JSON Output
+
+When `--json` is used, all commands produce structured JSON output.
+
+=== Read Operations
+
+[source,json]
+----
+{
+  "file": "song.flac",
+  "streamInfo": {
+    "sampleRate": 48000,
+    "channelCount": 1,
+    "bitsPerSample": 32,
+    "totalSamples": 240000,
+    "md5Signature": "09bffcd26cb9701e61558be6695a7680"
+  },
+  "vorbisComment": {
+    "vendorString": "reference libFLAC 1.5.0 20250211",
+    "tags": {
+      "ARTIST": "Example Artist"
+    }
+  }
+}
+----
+
+=== Write Operations
+
+[source,json]
+----
+{
+  "success": true,
+  "mutationsApplied": 1
+}
+----
+
+=== Dry Run
+
+[source,json]
+----
+{
+  "dryRun": true,
+  "mutations": [...]
+}
+----

@@ -1,0 +1,37 @@
+%% dart-metaflac canonical edit workflow
+flowchart TD
+    START(["FLAC Bytes / Stream"])
+
+    PARSE{"Input type?"}
+    PARSE_BYTES["FlacMetadataDocument\n.readFromBytes()"]
+    PARSE_STREAM["FlacMetadataDocument\n.readFromStream()"]
+
+    DOC["FlacMetadataDocument\n(blocks · audioDataOffset)"]
+
+    EDIT["doc.edit((editor) => ...)\nApply MetadataMutation operations"]
+
+    PADDING{"Fits in existing\npadding?"}
+
+    INPLACE["In-place update\n(metadata blocks only)"]
+    FULLREWRITE["Full rewrite\n(metadata + audio copy)"]
+
+    OUTPUT(["Updated bytes / file"])
+
+    VERIFY["Audio data preserved\nbyte-for-byte"]
+
+    START --> PARSE
+    PARSE -- bytes --> PARSE_BYTES
+    PARSE -- stream --> PARSE_STREAM
+    PARSE_BYTES --> DOC
+    PARSE_STREAM --> DOC
+
+    DOC --> EDIT
+    EDIT --> PADDING
+
+    PADDING -- Yes --> INPLACE
+    PADDING -- No  --> FULLREWRITE
+
+    INPLACE     --> OUTPUT
+    FULLREWRITE --> OUTPUT
+
+    OUTPUT --> VERIFY

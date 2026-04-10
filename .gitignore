@@ -31,3 +31,7 @@ doc/api/
 .idea
 .claude
 .dart_tool
+
+# Antora build output
+target/
+.cache/

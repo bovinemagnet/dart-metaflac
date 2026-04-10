@@ -1,0 +1,7 @@
+* xref:index.adoc[Overview]
+* xref:getting-started.adoc[Getting Started]
+* xref:cli-reference.adoc[CLI Reference]
+* xref:library-guide.adoc[Library Guide]
+* xref:architecture.adoc[Architecture]
+* xref:audio-integrity.adoc[Audio Integrity]
+* xref:migration.adoc[Migration from metaflac]

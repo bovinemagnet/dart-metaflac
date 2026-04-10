@@ -1,0 +1,189 @@
+= Audio Integrity
+Paul Snow
+:description: How dart_metaflac ensures metadata operations never corrupt audio data
+
+include::_attributes.adoc[]
+
+This page explains how {project-name} guarantees that metadata operations never damage or corrupt audio data within FLAC files, and how the test suite verifies these guarantees.
+
+== The Problem
+
+FLAC files store metadata blocks (tags, pictures, padding) in a header region followed by compressed audio frames.
+Any metadata edit that changes the header size must correctly relocate the boundary between metadata and audio data.
+A bug in this process could truncate, shift, or corrupt the audio frames -- silently producing a file that plays back incorrectly or not at all.
+
+== How the Library Preserves Audio
+
+=== Metadata-Only Edits
+
+All metadata mutations operate exclusively on the header region.
+The library tracks `audioDataOffset` -- the byte position where audio frames begin -- and copies the audio region verbatim into the output.
+The audio bytes are never parsed, modified, or rewritten.
+
+=== Padding Strategy
+
+When a metadata edit fits within the existing padding, the library performs an in-place update by adjusting the padding block size.
+The audio region remains at its original file offset and is not touched at all.
+
+When a metadata edit exceeds the available padding (e.g. adding a large picture), the library performs a full rewrite: it serialises the new metadata blocks, then copies the original audio bytes after them.
+
+In both cases, the audio data is preserved byte-for-byte.
+
+=== Streaming Transforms
+
+The `StreamRewriter` and `FlacTransformer.transformStream()` APIs buffer only the metadata region in memory.
+Audio frames are streamed through without being loaded into memory.
+This ensures audio data passes through unmodified, even for very large files.
+
+== How the Tests Verify This
+
+The test suite includes 53 tests specifically designed to verify audio integrity using a real FLAC file (`flac/siren.flac` -- a 5-second mono sawtooth siren encoded by libFLAC at 48 kHz, 32-bit).
+
+=== Byte-Level Audio Comparison
+
+The core verification technique extracts the audio region from both the original and modified files and compares them byte-for-byte:
+
+[source,dart]
+----
+Uint8List audioBytes(FlacMetadataDocument doc, Uint8List bytes) {
+  return bytes.sublist(doc.audioDataOffset);
+}
+
+// After any metadata mutation:
+expect(
+  audioBytes(updatedDoc, updatedBytes),
+  equals(audioBytes(originalDoc, originalBytes)),
+);
+----
+
+If even a single audio byte is shifted, truncated, or corrupted, the test fails immediately.
+
+This comparison is performed after every category of mutation:
+
+* **Tag operations** -- set, add, remove, clear, and multi-step cycles
+* **Picture operations** -- adding and removing embedded images (which significantly change header size)
+* **Padding operations** -- resizing padding blocks
+* **Streaming transforms** -- data passed through `StreamRewriter` and chunked streams
+* **Chained edits** -- multiple sequential mutations accumulated on the same document
+
+=== MD5 Signature Verification
+
+The FLAC STREAMINFO block contains an MD5 hash computed over the raw audio samples by the encoder.
+The tests verify this signature remains unchanged after metadata-only edits, both via the library API and the CLI:
+
+[source,dart]
+----
+// Library API
+expect(
+  md5Hex(updatedDoc.streamInfo.md5Signature),
+  equals('09bffcd26cb9701e61558be6695a7680'),
+);
+----
+
+[source,bash]
+----
+# CLI verification
+dart run bin/metaflac.dart --show-md5 --json song.flac
+# Returns the same MD5 before and after metadata edits
+----
+
+=== STREAMINFO Consistency
+
+Every test that modifies metadata also verifies that the STREAMINFO fields (sample rate, channel count, bits per sample, total samples) survive the round-trip unchanged.
+
+=== Non-Audio Block Preservation
+
+The test file contains blocks that some decoders rely on: a seek table and four application blocks.
+The tests verify these survive all transforms:
+
+[source,dart]
+----
+final types = doc.blocks.map((b) => b.type).toList();
+expect(
+  types.where((t) => t == FlacBlockType.application).length,
+  equals(4),
+);
+expect(types, contains(FlacBlockType.seekTable));
+----
+
+=== Round-Trip Fidelity
+
+Identity round-trips (parse -> serialise -> re-parse) verify that every metadata field -- vendor string, tag keys and values, block types, and block counts -- survives unchanged.
+Multi-pass round-trips verify that mutations do not accumulate drift or corruption.
+
+=== File I/O Safety
+
+The `FlacFileEditor` tests verify audio integrity across all write modes:
+
+[cols="1,3", options="header"]
+|===
+| Write Mode | What It Tests
+
+| `safeAtomic`
+| Writes to a temp file, then renames -- original is untouched on failure
+
+| `outputToNewFile`
+| Original file is byte-identical after the operation
+
+| `auto`
+| Falls back to full rewrite when metadata grows beyond padding
+
+| `preserveModTime`
+| File modification time is restored after a safe write
+|===
+
+=== CLI End-to-End
+
+The CLI tests verify audio integrity through the full subprocess pipeline (argument parsing -> file read -> mutation -> file write -> re-read):
+
+* Multiple sequential CLI mutations leave STREAMINFO unchanged
+* The `--dry-run` flag produces zero byte changes to the file
+* The `--continue-on-error` flag processes valid files even when other files in the batch are corrupt
+
+== Running the Tests
+
+[source,bash]
+----
+# All audio integrity tests (library API)
+dart test test/real_flac_test.dart
+
+# All audio integrity tests (CLI)
+dart test test/real_flac_cli_test.dart
+
+# Full test suite
+dart test
+----
+
+== Summary of Guarantees
+
+[cols="2,3", options="header"]
+|===
+| Guarantee | Verified By
+
+| Audio bytes are never modified
+| Byte-level comparison after every mutation type
+
+| MD5 signature is preserved
+| STREAMINFO MD5 check via API and CLI
+
+| STREAMINFO fields are stable
+| Field-by-field assertion after every round-trip
+
+| Seek tables survive edits
+| Block type counting after transforms
+
+| Application blocks survive edits
+| Block type counting after transforms
+
+| Unknown block types survive edits
+| Round-trip preservation tests
+
+| Streaming does not buffer audio
+| StreamRewriter and chunked stream tests
+
+| File I/O does not corrupt data
+| All write modes tested with re-read verification
+
+| CLI mutations are safe end-to-end
+| Subprocess tests with STREAMINFO and MD5 checks
+|===

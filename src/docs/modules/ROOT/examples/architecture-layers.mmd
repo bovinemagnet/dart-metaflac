@@ -1,0 +1,39 @@
+%% dart-metaflac layered module architecture
+flowchart TD
+    subgraph CLI["CLI  —  bin/metaflac.dart"]
+        cli["Command-line interface\nMetaflacCommandRunner / legacy flag parser"]
+    end
+
+    subgraph API["API Layer  —  api/"]
+        api["High-level convenience functions\nreadFlacMetadata · transformFlac"]
+    end
+
+    subgraph TRANSFORM["Transform Layer  —  transform/"]
+        transform["FlacTransformer · StreamRewriter\nFlacTransformPlan"]
+    end
+
+    subgraph EDIT["Edit Layer  —  edit/"]
+        edit["FlacMetadataEditor · MetadataMutation\nPaddingStrategy"]
+    end
+
+    subgraph MODEL["Model Layer  —  model/"]
+        model["FlacMetadataDocument · VorbisComments\nStreamInfoBlock · PictureBlock"]
+    end
+
+    subgraph BINARY["Binary Layer  —  binary/"]
+        binary["FlacParser · FlacSerializer\nByteReader · ByteWriter"]
+    end
+
+    subgraph IO["IO Layer  —  io/  ❨dart:io❩"]
+        io["FlacFileEditor · AtomicWriter\nModTimePreserver"]
+    end
+
+    CLI     --> API
+    API     --> TRANSFORM
+    API     --> EDIT
+    TRANSFORM --> EDIT
+    EDIT    --> MODEL
+    MODEL   --> BINARY
+
+    IO -. "file read / write\n(dart:io adapter)" .-> TRANSFORM
+    IO -. uses .-> BINARY

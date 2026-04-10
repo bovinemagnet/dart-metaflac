@@ -1,0 +1,361 @@
+= Library Guide
+Paul Snow
+:description: In-depth guide to using dart_metaflac as a Dart library
+
+include::_attributes.adoc[]
+
+This guide covers the full {project-name} library API for reading, editing, and transforming FLAC metadata from Dart code.
+
+== Core Concepts
+
+=== Immutable Document Model
+
+All metadata is represented by `FlacMetadataDocument`, an immutable container holding a list of metadata blocks and an audio data offset.
+Edits do not mutate the document -- they return a new instance:
+
+[source,dart]
+----
+final doc = FlacMetadataDocument.readFromBytes(flacBytes);
+final updated = doc.edit((editor) {
+  editor.setTag('ARTIST', ['New Artist']);
+});
+// doc is unchanged; updated is a new document
+final newBytes = updated.toBytes();
+----
+
+=== VorbisComments Is Not a Map
+
+Vorbis comments preserve insertion order and allow duplicate keys (per the Vorbis specification).
+Use `valuesOf(key)` rather than map-style access:
+
+[source,dart]
+----
+final comments = doc.vorbisComment!.comments;
+
+// Returns a List<String> of all values for the key (case-insensitive)
+final artists = comments.valuesOf('ARTIST');
+
+// Iterate all entries preserving order
+for (final entry in comments.entries) {
+  print('${entry.key}=${entry.value}');
+}
+
+// Convert to a multi-map if needed
+final map = comments.asMultiMap(); // Map<String, List<String>>
+----
+
+=== Unknown Blocks Survive Round-Trips
+
+Any metadata block type not recognised by the library (e.g. future FLAC extensions) is preserved as raw bytes during serialisation.
+This guarantees that editing tags does not silently discard data.
+
+== Reading Metadata
+
+=== From Bytes
+
+The simplest approach -- works everywhere, including Flutter Web:
+
+[source,dart]
+----
+import 'package:dart_metaflac/dart_metaflac.dart';
+
+final doc = FlacMetadataDocument.readFromBytes(flacBytes);
+----
+
+=== From a Stream
+
+For large files or when data arrives as a stream:
+
+[source,dart]
+----
+final doc = await FlacMetadataDocument.readFromStream(byteStream);
+----
+
+=== Convenience Functions
+
+The top-level API functions provide a simpler interface:
+
+[source,dart]
+----
+// From a stream
+final doc = await readFlacMetadata(byteStream);
+
+// From bytes (synchronous)
+final doc = readFlacMetadataFromBytes(flacBytes);
+----
+
+=== Accessing Metadata
+
+[source,dart]
+----
+// Stream info (always present)
+final si = doc.streamInfo;
+print('Sample rate: ${si.sampleRate}');
+print('Channels: ${si.channelCount}');
+print('Bits per sample: ${si.bitsPerSample}');
+print('Total samples: ${si.totalSamples}');
+print('MD5: ${si.md5Signature}');
+
+// Vorbis comments (optional)
+final vc = doc.vorbisComment;
+if (vc != null) {
+  print('Vendor: ${vc.comments.vendorString}');
+  print('Artist: ${vc.comments.valuesOf('ARTIST')}');
+}
+
+// Pictures (may be empty)
+for (final pic in doc.pictures) {
+  print('${pic.pictureType}: ${pic.mimeType} ${pic.width}x${pic.height}');
+}
+
+// All metadata blocks
+for (final block in doc.blocks) {
+  print('${block.type}: ${block.payloadLength} bytes');
+}
+----
+
+== Editing Metadata
+
+=== The Edit API
+
+Use `doc.edit()` with an editor callback to apply mutations:
+
+[source,dart]
+----
+final updated = doc.edit((editor) {
+  // Tag operations
+  editor.setTag('ARTIST', ['New Artist']);       // Replace all values
+  editor.addTag('GENRE', 'Rock');                // Append a value
+  editor.removeTag('COMMENT');                   // Remove all values for key
+  editor.removeExactTagValue('GENRE', 'Pop');    // Remove one specific value
+  editor.clearTags();                            // Remove all tags
+
+  // Picture operations
+  editor.addPicture(pictureBlock);
+  editor.removePictureByType(PictureType.frontCover);
+  editor.removeAllPictures();
+
+  // Padding
+  editor.setPadding(4096);
+});
+----
+
+Edits can be chained:
+
+[source,dart]
+----
+final result = doc
+    .edit((e) => e.setTag('ARTIST', ['A']))
+    .edit((e) => e.addTag('GENRE', 'Rock'))
+    .edit((e) => e.setPadding(2048));
+----
+
+=== Mutation Objects
+
+For programmatic use, mutations are represented as a sealed class hierarchy:
+
+[cols="2,3", options="header"]
+|===
+| Mutation | Description
+
+| `SetTag(key, values)`
+| Replace all values for a key
+
+| `AddTag(key, value)`
+| Append a single value
+
+| `RemoveTag(key)`
+| Remove all values for a key
+
+| `RemoveExactTagValue(key, value)`
+| Remove one specific key=value pair
+
+| `ClearTags()`
+| Remove all Vorbis comment entries
+
+| `AddPicture(picture)`
+| Add a picture block
+
+| `ReplacePictureByType(type, replacement)`
+| Replace a picture by its type
+
+| `RemovePictureByType(type)`
+| Remove pictures by type
+
+| `RemoveAllPictures()`
+| Remove all picture blocks
+
+| `SetPadding(size)`
+| Set the padding block size
+|===
+
+These can be passed as a list to the transform APIs:
+
+[source,dart]
+----
+final result = await transformFlac(flacBytes, [
+  const SetTag('ARTIST', ['New Artist']),
+  const AddTag('GENRE', 'Electronic'),
+  const SetPadding(4096),
+]);
+----
+
+== Transforming FLAC Files
+
+[{MERMAID}]
+....
+include::{examplesdir}/edit-workflow.mmd[]
+....
+
+=== In-Memory Transform
+
+For files that fit comfortably in memory:
+
+[source,dart]
+----
+final result = await transformFlac(flacBytes, [
+  const SetTag('TITLE', ['Updated']),
+]);
+// result.bytes     -- the transformed FLAC file as Uint8List
+// result.document  -- the parsed FlacMetadataDocument
+// result.plan      -- the transform plan (metadata sizes, fit analysis)
+----
+
+=== Streaming Transform
+
+For large files where you want to avoid loading the entire file into memory:
+
+[source,dart]
+----
+final transformer = FlacTransformer.fromStream(inputStream);
+
+// Read metadata without transforming
+final doc = await transformer.readMetadata();
+
+// Transform and get a stream of output bytes
+final outputStream = await transformer.transformStream(
+  mutations: [const SetTag('ARTIST', ['Streamed'])],
+);
+
+// Collect or pipe the output stream
+await for (final chunk in outputStream) {
+  sink.add(chunk);
+}
+----
+
+NOTE: The streaming API buffers only the metadata region in memory.
+Audio frames are streamed through without being loaded, making it suitable for very large files.
+
+=== Transform Options
+
+[source,dart]
+----
+final result = await transformFlac(
+  flacBytes,
+  [const SetTag('TITLE', ['X'])],
+  options: const FlacTransformOptions(
+    writeMode: WriteMode.auto,
+    explicitPaddingSize: 4096,
+  ),
+);
+----
+
+== File I/O
+
+The `io` module provides file-based operations using `dart:io`.
+This is available on Dart CLI, Flutter mobile, and Flutter desktop -- but not Flutter Web.
+
+=== Reading a File
+
+[source,dart]
+----
+final doc = await FlacFileEditor.readFile('song.flac');
+print(doc.streamInfo.sampleRate);
+----
+
+=== Updating a File
+
+[source,dart]
+----
+await FlacFileEditor.updateFile(
+  'song.flac',
+  mutations: [
+    const SetTag('ARTIST', ['New Artist']),
+    const AddTag('GENRE', 'Rock'),
+  ],
+);
+----
+
+=== Write Modes
+
+[cols="2,3", options="header"]
+|===
+| Mode | Behaviour
+
+| `safeAtomic` (default)
+| Writes to a temporary file, then renames it over the original.
+  The original is never partially overwritten.
+
+| `outputToNewFile`
+| Writes to a specified output path, leaving the original untouched.
+  Requires `outputPath` in options.
+
+| `inPlaceIfPossible`
+| Overwrites the metadata region in-place if the new metadata fits within the existing space.
+  Throws `WriteConflictException` if it does not fit.
+
+| `auto`
+| Tries in-place first; falls back to a full atomic rewrite if the metadata does not fit.
+|===
+
+[source,dart]
+----
+// Write to a new file
+await FlacFileEditor.updateFile(
+  'song.flac',
+  mutations: [const SetTag('TITLE', ['X'])],
+  options: FlacWriteOptions(
+    writeMode: WriteMode.outputToNewFile,
+    outputPath: 'song-updated.flac',
+  ),
+);
+
+// Preserve modification time
+await FlacFileEditor.updateFile(
+  'song.flac',
+  mutations: [const SetTag('TITLE', ['X'])],
+  options: const FlacWriteOptions(preserveModTime: true),
+);
+----
+
+== Error Handling
+
+The library uses a typed exception hierarchy rooted at `FlacMetadataException`:
+
+[cols="2,3", options="header"]
+|===
+| Exception | When Thrown
+
+| `InvalidFlacException`
+| The input bytes are not a valid FLAC file (bad magic number, truncated data)
+
+| `MalformedMetadataException`
+| A metadata block has invalid structure
+
+| `FlacIoException`
+| A file read or write operation failed
+
+| `WriteConflictException`
+| `inPlaceIfPossible` mode was used but the new metadata does not fit
+|===
+
+[source,dart]
+----
+try {
+  final doc = FlacMetadataDocument.readFromBytes(bytes);
+} on InvalidFlacException catch (e) {
+  print('Not a valid FLAC file: $e');
+} on FlacMetadataException catch (e) {
+  print('Metadata error: $e');
+}
+----
