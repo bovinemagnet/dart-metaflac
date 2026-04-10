@@ -18,15 +18,48 @@ import 'byte_reader.dart';
 import 'flac_block_header.dart';
 import 'flac_constants.dart';
 
+/// Parser that reads raw FLAC bytes into a [FlacMetadataDocument].
+///
+/// All public entry points are static factory methods. The class cannot be
+/// instantiated directly.
+///
+/// Supports both in-memory parsing via [parseBytes] and streaming parsing via
+/// [parse]. All standard FLAC metadata block types (0--6) are decoded into
+/// their corresponding model objects; unknown block types are preserved as
+/// [UnknownBlock] instances so they survive round-trips.
+///
+/// Throws [InvalidFlacException] if the data does not begin with the FLAC
+/// magic marker or is missing a STREAMINFO block.
+/// Throws [MalformedMetadataException] if a block header declares a payload
+/// length that exceeds the remaining data.
 class FlacParser {
   FlacParser._();
 
+  /// Parse a FLAC stream into a [FlacMetadataDocument].
+  ///
+  /// Collect all bytes from [stream] into memory first, then delegate to
+  /// [parseBytes]. For large files where only metadata is needed, consider
+  /// using the streaming transform API instead.
+  ///
+  /// Throws [InvalidFlacException] if the data is not a valid FLAC stream.
+  /// Throws [MalformedMetadataException] if any metadata block is malformed.
   static Future<FlacMetadataDocument> parse(
       Stream<List<int>> stream) async {
     final bytes = await _collectBytes(stream);
     return parseBytes(bytes);
   }
 
+  /// Parse a FLAC byte buffer into a [FlacMetadataDocument].
+  ///
+  /// Validate the four-byte FLAC magic marker, then read each metadata block
+  /// header and payload sequentially. The resulting document records the byte
+  /// offset where audio data begins so that serialisation can reconstruct the
+  /// full file.
+  ///
+  /// Throws [InvalidFlacException] if [bytes] is too short, lacks a valid
+  /// FLAC marker, or contains no STREAMINFO block.
+  /// Throws [MalformedMetadataException] if a metadata block extends beyond
+  /// the available data.
   static FlacMetadataDocument parseBytes(Uint8List bytes) {
     if (bytes.length < 4) {
       throw InvalidFlacException('File too short to be a FLAC file');
@@ -290,6 +323,10 @@ class FlacParser {
     return UnknownBlock(rawTypeCode: typeCode, rawPayload: payload);
   }
 
+  /// Collect all chunks from a byte [stream] into a single [Uint8List].
+  ///
+  /// This is a convenience wrapper exposed for use by other components that
+  /// need to buffer an entire stream before processing.
   static Future<Uint8List> collectBytes(Stream<List<int>> stream) =>
       _collectBytes(stream);
 

@@ -1,3 +1,40 @@
+/// A pure Dart library for reading and writing FLAC audio metadata.
+///
+/// This library provides complete support for FLAC metadata operations without
+/// depending on `dart:io` in its core, making it suitable for Dart, Flutter,
+/// and web applications.
+///
+/// ## Modules
+///
+/// * **model** — Immutable domain objects representing FLAC metadata blocks,
+///   including [FlacMetadataDocument], [VorbisComments], [StreamInfoBlock],
+///   [PictureBlock], and more.
+/// * **binary** — Low-level parsing and serialisation via [FlacParser] and
+///   [FlacSerializer].
+/// * **edit** — Mutation operations through [FlacMetadataEditor] and the
+///   [MetadataMutation] sealed class hierarchy.
+/// * **transform** — Transform planning and streaming via [FlacTransformer].
+/// * **api** — High-level convenience functions: [readFlacMetadata],
+///   [readFlacMetadataFromBytes], [applyMutations], and [transformFlac].
+/// * **io** — File persistence adapters using `dart:io`, including
+///   [FlacFileEditor] and [AtomicWriter] for safe file operations.
+///
+/// ## Quick Start
+///
+/// ```dart
+/// import 'package:dart_metaflac/dart_metaflac.dart';
+///
+/// // Read metadata from bytes
+/// final doc = FlacMetadataDocument.readFromBytes(flacBytes);
+/// print(doc.vorbisComment?.comments.valuesOf('ARTIST'));
+///
+/// // Edit metadata
+/// final updated = doc.edit((editor) {
+///   editor.setTag('ARTIST', ['New Artist']);
+///   editor.setTag('TITLE', ['New Title']);
+/// });
+/// final newBytes = updated.toBytes();
+/// ```
 library dart_metaflac;
 
 // Error types

@@ -4,9 +4,23 @@ import '../model/flac_metadata_block.dart';
 import 'byte_writer.dart';
 import 'flac_constants.dart';
 
+/// Serialiser that writes [FlacMetadataBlock] lists back to FLAC binary format.
+///
+/// Produces a valid FLAC byte sequence consisting of the four-byte magic
+/// marker (`fLaC`), followed by each metadata block (header + payload), and
+/// optionally the raw audio data. The last block in the list is automatically
+/// marked with the is-last flag.
+///
+/// All public entry points are static methods. The class cannot be
+/// instantiated directly.
 class FlacSerializer {
   FlacSerializer._();
 
+  /// Serialise metadata [blocks] and [audioData] into a complete FLAC file.
+  ///
+  /// The returned [Uint8List] begins with the FLAC magic marker, followed by
+  /// all metadata blocks with correct headers, and ends with the raw audio
+  /// data bytes.
   static Uint8List serialize(
       List<FlacMetadataBlock> blocks, Uint8List audioData) {
     final writer = _serializeBlocks(blocks);
@@ -14,7 +28,7 @@ class FlacSerializer {
     return writer.toBytes();
   }
 
-  /// Serialises only the metadata region (fLaC marker + metadata blocks).
+  /// Serialise only the metadata region (fLaC marker + metadata blocks).
   ///
   /// Unlike [serialize], no audio data is appended. This is used by
   /// [StreamRewriter] where audio is streamed separately.
@@ -22,7 +36,7 @@ class FlacSerializer {
     return _serializeBlocks(blocks).toBytes();
   }
 
-  /// Writes the fLaC marker and all metadata blocks to a [ByteWriter].
+  /// Write the fLaC marker and all metadata blocks to a [ByteWriter].
   static ByteWriter _serializeBlocks(List<FlacMetadataBlock> blocks) {
     final writer = ByteWriter();
 

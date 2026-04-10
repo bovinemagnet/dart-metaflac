@@ -7,6 +7,26 @@ import '../transform/flac_transform_options.dart';
 import '../transform/flac_transform_plan.dart';
 import '../transform/flac_transform_result.dart';
 
+/// Transform a FLAC file by applying metadata mutations in memory.
+///
+/// Parse the [input] bytes as a FLAC file, apply each [MetadataMutation]
+/// in [mutations] in order, and return a [FlacTransformResult] containing
+/// the updated [FlacMetadataDocument], the serialised output bytes, and
+/// a [FlacTransformPlan] describing the transformation.
+///
+/// The [options] parameter controls transform behaviour such as explicit
+/// padding size. When [FlacTransformOptions.explicitPaddingSize] is set,
+/// the padding block is resized to the specified number of bytes.
+///
+/// The returned [FlacTransformPlan] indicates whether the new metadata
+/// fits within the original metadata region, which is useful for
+/// deciding between in-place and full-rewrite strategies.
+///
+/// Throws [InvalidFlacException] if [input] does not contain valid
+/// FLAC data.
+///
+/// Throws [MalformedMetadataException] if any metadata block is
+/// structurally invalid.
 Future<FlacTransformResult> transformFlac(
   Uint8List input,
   List<MetadataMutation> mutations, {

@@ -4,8 +4,20 @@ import 'flac_block_type.dart';
 import 'flac_metadata_block.dart';
 import 'vorbis_comments.dart';
 
+/// A FLAC metadata block containing Vorbis comments (tags).
+///
+/// This block stores human-readable metadata such as ARTIST, TITLE, and
+/// ALBUM using the Vorbis comment format. The payload is serialised with
+/// little-endian length-prefixed UTF-8 strings.
+///
+/// See also:
+/// - [VorbisComments] for the underlying data model.
+/// - [FlacBlockType.vorbisComment] for the block type code.
 final class VorbisCommentBlock extends FlacMetadataBlock {
+  /// Create a [VorbisCommentBlock] wrapping the given [comments].
   const VorbisCommentBlock({required this.comments});
+
+  /// The Vorbis comments (vendor string and tag entries) held by this block.
   final VorbisComments comments;
 
   @override
