@@ -3,6 +3,20 @@ import '../binary/flac_parser.dart';
 import '../binary/flac_serializer.dart';
 import '../edit/mutation_ops.dart';
 
+/// Apply a list of metadata mutations to a FLAC byte stream.
+///
+/// Read the entire [input] stream, parse it as a FLAC file, apply each
+/// [MetadataMutation] in [mutations] in order, then serialise the
+/// modified document back to bytes.
+///
+/// The returned [Uint8List] contains the complete FLAC file including
+/// the updated metadata blocks and the original audio data.
+///
+/// Throws [InvalidFlacException] if the input does not contain valid
+/// FLAC data.
+///
+/// Throws [MalformedMetadataException] if any metadata block is
+/// structurally invalid.
 Future<Uint8List> applyMutations(
   Stream<List<int>> input,
   List<MetadataMutation> mutations,

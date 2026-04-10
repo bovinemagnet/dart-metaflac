@@ -2,7 +2,21 @@ import 'dart:typed_data';
 import 'flac_block_type.dart';
 import 'flac_metadata_block.dart';
 
+/// The mandatory STREAMINFO metadata block (type 0).
+///
+/// Every valid FLAC file contains exactly one [StreamInfoBlock] as the first
+/// metadata block. It describes the audio stream's fundamental properties
+/// such as sample rate, channel count, bit depth, and total sample count,
+/// along with minimum/maximum block and frame sizes and an MD5 digest of
+/// the unencoded audio data.
+///
+/// The payload is always exactly 34 bytes.
+///
+/// See also:
+/// - [FlacBlockType.streamInfo] for the block type code.
+/// - [FlacMetadataDocument.streamInfo] for convenient access.
 final class StreamInfoBlock extends FlacMetadataBlock {
+  /// Create a [StreamInfoBlock] with the given audio stream properties.
   const StreamInfoBlock({
     required this.minBlockSize,
     required this.maxBlockSize,
@@ -15,14 +29,31 @@ final class StreamInfoBlock extends FlacMetadataBlock {
     required this.md5Signature,
   });
 
+  /// Minimum block size (in samples) used in the stream.
   final int minBlockSize;
+
+  /// Maximum block size (in samples) used in the stream.
   final int maxBlockSize;
+
+  /// Minimum frame size in bytes, or 0 if unknown.
   final int minFrameSize;
+
+  /// Maximum frame size in bytes, or 0 if unknown.
   final int maxFrameSize;
+
+  /// Sample rate in Hz (e.g. 44100, 48000).
   final int sampleRate;
+
+  /// Number of audio channels (1 = mono, 2 = stereo, etc.).
   final int channelCount;
+
+  /// Bits per sample (e.g. 16, 24).
   final int bitsPerSample;
+
+  /// Total number of inter-channel samples in the stream, or 0 if unknown.
   final int totalSamples;
+
+  /// 16-byte MD5 signature of the unencoded audio data.
   final Uint8List md5Signature;
 
   @override

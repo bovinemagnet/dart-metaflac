@@ -4,7 +4,18 @@ import 'flac_block_type.dart';
 import 'flac_metadata_block.dart';
 import 'picture_type.dart';
 
+/// A FLAC metadata block containing an embedded picture (type 6).
+///
+/// A FLAC file may contain multiple [PictureBlock] instances, each holding
+/// a single image with its associated metadata (MIME type, dimensions,
+/// colour depth, and description). Common uses include album cover art
+/// and artist photos.
+///
+/// See also:
+/// - [PictureType] for the enumeration of picture categories.
+/// - [FlacMetadataDocument.pictures] for convenient access to all pictures.
 final class PictureBlock extends FlacMetadataBlock {
+  /// Create a [PictureBlock] with the given image data and metadata.
   const PictureBlock({
     required this.pictureType,
     required this.mimeType,
@@ -16,13 +27,29 @@ final class PictureBlock extends FlacMetadataBlock {
     required this.data,
   });
 
+  /// The category of this picture (e.g. front cover, artist photo).
   final PictureType pictureType;
+
+  /// The MIME type of the image data (e.g. `image/png`, `image/jpeg`).
   final String mimeType;
+
+  /// A UTF-8 description of the picture, which may be empty.
   final String description;
+
+  /// Image width in pixels.
   final int width;
+
+  /// Image height in pixels.
   final int height;
+
+  /// Colour depth of the image in bits per pixel.
   final int colorDepth;
+
+  /// Number of colours used for indexed-colour images (e.g. GIF), or 0
+  /// for non-indexed formats.
   final int indexedColors;
+
+  /// The raw image data bytes.
   final Uint8List data;
 
   @override
