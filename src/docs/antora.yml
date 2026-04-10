@@ -1,13 +1,13 @@
 name: dart-metaflac
 title: dart_metaflac
-version: '0.0.0'
+version: '0.0.2'
 start_page: ROOT:index.adoc
 nav:
 - modules/ROOT/nav.adoc
 asciidoc:
   attributes:
     project-name: dart_metaflac
-    project-version: '0.0.0'
+    project-version: '0.0.2'
     dart-version: '3'
     source-highlighter: highlight.js
     icons: font

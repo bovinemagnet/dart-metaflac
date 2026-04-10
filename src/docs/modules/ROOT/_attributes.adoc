@@ -1,5 +1,5 @@
 :project-name: dart_metaflac
-:project-version: 0.0.0
+:project-version: 0.0.2
 :dart-version: 3
 :author: Paul Snow
 :icons: font
