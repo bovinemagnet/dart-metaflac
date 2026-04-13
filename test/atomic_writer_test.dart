@@ -37,7 +37,8 @@ void main() {
       await AtomicWriter.writeAtomic(path, Uint8List.fromList([1]));
       final remaining = tempDir.listSync().whereType<File>().toList();
       expect(remaining.length, equals(1));
-      expect(FileSystemEntity.identicalSync(remaining.first.path, path), isTrue);
+      expect(
+          FileSystemEntity.identicalSync(remaining.first.path, path), isTrue);
     });
 
     test('original file survives if target directory does not exist', () async {
