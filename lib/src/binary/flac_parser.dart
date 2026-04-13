@@ -43,8 +43,7 @@ class FlacParser {
   ///
   /// Throws [InvalidFlacException] if the data is not a valid FLAC stream.
   /// Throws [MalformedMetadataException] if any metadata block is malformed.
-  static Future<FlacMetadataDocument> parse(
-      Stream<List<int>> stream) async {
+  static Future<FlacMetadataDocument> parse(Stream<List<int>> stream) async {
     final bytes = await _collectBytes(stream);
     return parseBytes(bytes);
   }
@@ -170,11 +169,8 @@ class FlacParser {
     final sampleRate = (b10 << 12) | (b11 << 4) | (b12 >> 4);
     final channelCount = ((b12 >> 1) & 0x07) + 1;
     final bitsPerSample = (((b12 & 0x01) << 4) | (b13 >> 4)) + 1;
-    final totalSamples = ((b13 & 0x0F) << 32) |
-        (b14 << 24) |
-        (b15 << 16) |
-        (b16 << 8) |
-        b17;
+    final totalSamples =
+        ((b13 & 0x0F) << 32) | (b14 << 24) | (b15 << 16) | (b16 << 8) | b17;
 
     final md5 = reader.readBytes(16);
 
@@ -203,8 +199,7 @@ class FlacParser {
     return ApplicationBlock(applicationId: appId, data: data);
   }
 
-  static SeekTableBlock _parseSeekTable(
-      ByteReader reader, int payloadLength) {
+  static SeekTableBlock _parseSeekTable(ByteReader reader, int payloadLength) {
     final count = payloadLength ~/ 18;
     final points = <SeekPoint>[];
     for (var i = 0; i < count; i++) {
@@ -241,8 +236,7 @@ class FlacParser {
       }
     }
     return VorbisCommentBlock(
-      comments: VorbisComments(
-          vendorString: vendorString, entries: entries),
+      comments: VorbisComments(vendorString: vendorString, entries: entries),
     );
   }
 
@@ -257,8 +251,7 @@ class FlacParser {
     // Minimal parse for the public model fields.
     final rawReader = ByteReader(rawPayload);
     final mcnBytes = rawReader.readBytes(128);
-    final mcn = String.fromCharCodes(
-        mcnBytes.takeWhile((b) => b != 0));
+    final mcn = String.fromCharCodes(mcnBytes.takeWhile((b) => b != 0));
     final leadInHi = rawReader.readUint32BE();
     final leadInLo = rawReader.readUint32BE();
     final leadInSamples = (leadInHi << 32) | leadInLo;
@@ -274,14 +267,13 @@ class FlacParser {
       final trackOffset = (offsetHi << 32) | offsetLo;
       final number = rawReader.readUint8();
       final isrcBytes = rawReader.readBytes(12);
-      final isrc =
-          String.fromCharCodes(isrcBytes.takeWhile((b) => b != 0));
+      final isrc = String.fromCharCodes(isrcBytes.takeWhile((b) => b != 0));
       rawReader.skip(14); // flags + reserved
       final indexCount = rawReader.readUint8();
       rawReader.skip(3); // reserved
       rawReader.skip(indexCount * 12);
-      tracks.add(CueSheetTrack(
-          offset: trackOffset, number: number, isrc: isrc));
+      tracks
+          .add(CueSheetTrack(offset: trackOffset, number: number, isrc: isrc));
     }
 
     return CueSheetBlock(

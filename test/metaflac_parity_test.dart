@@ -40,8 +40,7 @@ void main() {
   }
 
   setUp(() {
-    tmpDir =
-        Directory.systemTemp.createTempSync('metaflac_parity_test_');
+    tmpDir = Directory.systemTemp.createTempSync('metaflac_parity_test_');
   });
 
   tearDown(() {
@@ -134,8 +133,7 @@ void main() {
       final r2 = await runCli(['--show-md5sum', path]);
       expect(r1.exitCode, 0);
       expect(r2.exitCode, 0);
-      expect(r1.stdout.toString().trim(),
-          equals(r2.stdout.toString().trim()));
+      expect(r1.stdout.toString().trim(), equals(r2.stdout.toString().trim()));
     });
 
     test('scalar show-ops emit JSON when --json is set', () async {
@@ -197,8 +195,8 @@ void main() {
       final path = buildFixture();
       final path2 = tmpFile('parity2.flac');
       File(path2).writeAsBytesSync(File(path).readAsBytesSync());
-      final r = await runCli(
-          ['--show-sample-rate', '--no-filename', path, path2]);
+      final r =
+          await runCli(['--show-sample-rate', '--no-filename', path, path2]);
       expect(r.exitCode, 0);
       // With --no-filename we expect just '48000\n48000' and no path
       // prefix on either line.
@@ -211,14 +209,13 @@ void main() {
       expect(lines, equals(['48000', '48000']));
     });
 
-    test('-o writes to the output file and leaves the input intact',
-        () async {
+    test('-o writes to the output file and leaves the input intact', () async {
       final path = buildFixture();
       final outPath = tmpFile('parity-out.flac');
       final originalBytes = File(path).readAsBytesSync();
 
-      final r = await runCli(
-          ['--set-tag=ARTIST=Output Artist', '-o', outPath, path]);
+      final r =
+          await runCli(['--set-tag=ARTIST=Output Artist', '-o', outPath, path]);
       expect(r.exitCode, 0);
       expect(File(outPath).existsSync(), isTrue);
 
@@ -226,17 +223,15 @@ void main() {
       expect(File(path).readAsBytesSync(), equals(originalBytes));
 
       // Output has the new tag.
-      final showOut =
-          await runCli(['--show-tag=ARTIST', outPath]);
+      final showOut = await runCli(['--show-tag=ARTIST', outPath]);
       expect(showOut.exitCode, 0);
-      expect(showOut.stdout.toString().trim(),
-          contains('ARTIST=Output Artist'));
+      expect(
+          showOut.stdout.toString().trim(), contains('ARTIST=Output Artist'));
     });
 
     test('--no-utf8-convert is accepted as a no-op', () async {
       final path = buildFixture();
-      final r = await runCli(
-          ['--show-sample-rate', '--no-utf8-convert', path]);
+      final r = await runCli(['--show-sample-rate', '--no-utf8-convert', path]);
       expect(r.exitCode, 0);
       expect(r.stdout.toString().trim(), '48000');
     });
@@ -268,20 +263,16 @@ void main() {
       expect(rm.exitCode, 0);
 
       final after = await runCli(['--show-all-tags', path]);
-      expect(after.stdout.toString(),
-          isNot(contains('REPLAYGAIN_TRACK_GAIN')));
-      expect(after.stdout.toString(),
-          isNot(contains('REPLAYGAIN_TRACK_PEAK')));
-      expect(after.stdout.toString(),
-          isNot(contains('REPLAYGAIN_ALBUM_GAIN')));
+      expect(after.stdout.toString(), isNot(contains('REPLAYGAIN_TRACK_GAIN')));
+      expect(after.stdout.toString(), isNot(contains('REPLAYGAIN_TRACK_PEAK')));
+      expect(after.stdout.toString(), isNot(contains('REPLAYGAIN_ALBUM_GAIN')));
       // Non-RG tags survive.
       expect(after.stdout.toString(), contains('ARTIST=Parity Artist'));
     });
   });
 
   group('Tier 2: new tag mutations', () {
-    test('--remove-first-tag drops only the first matching entry',
-        () async {
+    test('--remove-first-tag drops only the first matching entry', () async {
       // Build a fixture with TWO ARTIST entries so we can verify only
       // the first is removed.
       final bytes = buildFlac(
@@ -309,11 +300,9 @@ void main() {
       expect(lines, equals(['ARTIST=Second']));
     });
 
-    test('--remove-all-tags-except retains only the named fields',
-        () async {
+    test('--remove-all-tags-except retains only the named fields', () async {
       final path = buildFixture();
-      final r = await runCli(
-          ['--remove-all-tags-except=TITLE=DATE', path]);
+      final r = await runCli(['--remove-all-tags-except=TITLE=DATE', path]);
       expect(r.exitCode, 0);
 
       final after = await runCli(['--show-all-tags', path]);
@@ -331,8 +320,7 @@ void main() {
       final valuePath = tmpFile('notes.txt');
       File(valuePath).writeAsStringSync('Multi-line\nCOMMENT from a file');
 
-      final r = await runCli(
-          ['--set-tag-from-file=COMMENT=$valuePath', path]);
+      final r = await runCli(['--set-tag-from-file=COMMENT=$valuePath', path]);
       expect(r.exitCode, 0);
 
       final after = await runCli(['--show-tag=COMMENT', path]);
@@ -425,8 +413,7 @@ void main() {
       expect(json['pictures'] as List, hasLength(1));
     });
 
-    test('--export-picture-to writes the embedded picture to disc',
-        () async {
+    test('--export-picture-to writes the embedded picture to disc', () async {
       final path = buildFixture();
       // First attach a picture so there is something to export.
       final picPath = tmpFile('in.jpg');
@@ -462,8 +449,8 @@ void main() {
       // Output carries the new tag.
       final show = await runCli(['--show-tag=ARTIST', outPath]);
       expect(show.exitCode, 0);
-      expect(show.stdout.toString().trim(),
-          contains('ARTIST=Long Form Artist'));
+      expect(
+          show.stdout.toString().trim(), contains('ARTIST=Long Form Artist'));
     });
   });
 }

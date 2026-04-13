@@ -161,8 +161,7 @@ void main() {
           await runMetaflac(['inspect', '--json', tmpFile('test.flac')]);
       expect(result.exitCode, equals(0));
 
-      final json =
-          jsonDecode(result.stdout as String) as Map<String, dynamic>;
+      final json = jsonDecode(result.stdout as String) as Map<String, dynamic>;
       expect(json, contains('streamInfo'));
       expect(json['streamInfo']['sampleRate'], equals(48000));
       expect(json['streamInfo']['bitsPerSample'], equals(24));
@@ -201,12 +200,11 @@ void main() {
       final flac = buildFlac();
       writeFlac('test.flac', flac);
 
-      final result = await runMetaflac(
-          ['blocks', 'list', '--json', tmpFile('test.flac')]);
+      final result =
+          await runMetaflac(['blocks', 'list', '--json', tmpFile('test.flac')]);
       expect(result.exitCode, equals(0));
 
-      final json =
-          jsonDecode(result.stdout as String) as Map<String, dynamic>;
+      final json = jsonDecode(result.stdout as String) as Map<String, dynamic>;
       expect(json, contains('blocks'));
       final blocks = json['blocks'] as List;
       expect(blocks, isNotEmpty);
@@ -230,8 +228,7 @@ void main() {
       );
       writeFlac('test.flac', flac);
 
-      final result =
-          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final result = await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
       expect(result.exitCode, equals(0));
       final out = result.stdout as String;
       expect(out, contains('TITLE=My Song'));
@@ -252,12 +249,11 @@ void main() {
       );
       writeFlac('test.flac', flac);
 
-      final result = await runMetaflac(
-          ['tags', 'list', '--json', tmpFile('test.flac')]);
+      final result =
+          await runMetaflac(['tags', 'list', '--json', tmpFile('test.flac')]);
       expect(result.exitCode, equals(0));
 
-      final json =
-          jsonDecode(result.stdout as String) as Map<String, dynamic>;
+      final json = jsonDecode(result.stdout as String) as Map<String, dynamic>;
       expect(json, contains('tags'));
       expect(json['tags']['TITLE'], equals('Song'));
       expect(json['tags']['ARTIST'], equals('Band'));
@@ -287,8 +283,7 @@ void main() {
       expect(result.exitCode, equals(0));
 
       // Verify by re-reading
-      final verify =
-          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final verify = await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
       expect(verify.stdout as String, contains('ARTIST=Test'));
       expect(verify.stdout as String, contains('TITLE=Old'));
     });
@@ -304,12 +299,11 @@ void main() {
       );
       writeFlac('test.flac', flac);
 
-      final result = await runMetaflac(
-          ['tags', 'set', tmpFile('test.flac'), 'TITLE=New']);
+      final result =
+          await runMetaflac(['tags', 'set', tmpFile('test.flac'), 'TITLE=New']);
       expect(result.exitCode, equals(0));
 
-      final verify =
-          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final verify = await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
       final out = verify.stdout as String;
       expect(out, contains('TITLE=New'));
       expect(out, isNot(contains('TITLE=Old')));
@@ -351,8 +345,7 @@ void main() {
           ['tags', 'set', '--json', tmpFile('test.flac'), 'ARTIST=Test']);
       expect(result.exitCode, equals(0));
 
-      final json =
-          jsonDecode(result.stdout as String) as Map<String, dynamic>;
+      final json = jsonDecode(result.stdout as String) as Map<String, dynamic>;
       expect(json['success'], isTrue);
       expect(json['mutationsApplied'], equals(1));
     });
@@ -374,8 +367,7 @@ void main() {
           ['tags', 'add', tmpFile('test.flac'), 'GENRE=Jazz']);
       expect(result.exitCode, equals(0));
 
-      final verify =
-          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final verify = await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
       final out = verify.stdout as String;
       expect(out, contains('GENRE=Rock'));
       expect(out, contains('GENRE=Jazz'));
@@ -397,12 +389,11 @@ void main() {
       );
       writeFlac('test.flac', flac);
 
-      final result = await runMetaflac(
-          ['tags', 'remove', tmpFile('test.flac'), 'TITLE']);
+      final result =
+          await runMetaflac(['tags', 'remove', tmpFile('test.flac'), 'TITLE']);
       expect(result.exitCode, equals(0));
 
-      final verify =
-          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final verify = await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
       final out = verify.stdout as String;
       expect(out, isNot(contains('TITLE')));
       expect(out, contains('ARTIST=Band'));
@@ -424,12 +415,10 @@ void main() {
       );
       writeFlac('test.flac', flac);
 
-      final result =
-          await runMetaflac(['tags', 'clear', tmpFile('test.flac')]);
+      final result = await runMetaflac(['tags', 'clear', tmpFile('test.flac')]);
       expect(result.exitCode, equals(0));
 
-      final verify =
-          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final verify = await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
       final out = (verify.stdout as String).trim();
       expect(out, isEmpty);
     });
@@ -500,8 +489,7 @@ void main() {
           ['tags', 'import', '--from=$tagFilePath', tmpFile('test.flac')]);
       expect(result.exitCode, equals(0));
 
-      final verify =
-          await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
+      final verify = await runMetaflac(['tags', 'list', tmpFile('test.flac')]);
       final out = verify.stdout as String;
       expect(out, contains('TITLE=Imported'));
       expect(out, contains('ARTIST=Someone'));
@@ -514,11 +502,13 @@ void main() {
       writeFlac('test.flac', flac);
 
       // Write a minimal PNG file (magic bytes).
-      final pngBytes = Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+      final pngBytes =
+          Uint8List.fromList([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
       File(tmpFile('cover.png')).writeAsBytesSync(pngBytes);
 
       final result = await runMetaflac([
-        'picture', 'add',
+        'picture',
+        'add',
         '--file=${tmpFile('cover.png')}',
         tmpFile('test.flac'),
       ]);
@@ -527,8 +517,7 @@ void main() {
       // Verify picture exists by inspecting with JSON.
       final verify =
           await runMetaflac(['inspect', '--json', tmpFile('test.flac')]);
-      final json =
-          jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      final json = jsonDecode(verify.stdout as String) as Map<String, dynamic>;
       expect(json, contains('pictures'));
       final pics = json['pictures'] as List;
       expect(pics, isNotEmpty);
@@ -562,8 +551,7 @@ void main() {
       // Verify no pictures remain.
       final verify =
           await runMetaflac(['inspect', '--json', tmpFile('test.flac')]);
-      final json =
-          jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      final json = jsonDecode(verify.stdout as String) as Map<String, dynamic>;
       expect(json.containsKey('pictures'), isFalse);
     });
   });
@@ -590,7 +578,8 @@ void main() {
 
       final outPath = tmpFile('exported.png');
       final result = await runMetaflac([
-        'picture', 'export',
+        'picture',
+        'export',
         '--output=$outPath',
         tmpFile('test.flac'),
       ]);
@@ -606,15 +595,14 @@ void main() {
       final flac = buildFlac(paddingSize: 512);
       writeFlac('test.flac', flac);
 
-      final result = await runMetaflac(
-          ['padding', 'set', tmpFile('test.flac'), '4096']);
+      final result =
+          await runMetaflac(['padding', 'set', tmpFile('test.flac'), '4096']);
       expect(result.exitCode, equals(0));
 
       // Verify padding block size.
-      final verify = await runMetaflac(
-          ['blocks', 'list', '--json', tmpFile('test.flac')]);
-      final json =
-          jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      final verify =
+          await runMetaflac(['blocks', 'list', '--json', tmpFile('test.flac')]);
+      final json = jsonDecode(verify.stdout as String) as Map<String, dynamic>;
       final blocks = json['blocks'] as List;
       final paddingBlocks =
           blocks.where((b) => b['type'] == 'padding').toList();
@@ -633,10 +621,9 @@ void main() {
       expect(result.exitCode, equals(0));
 
       // Verify no padding blocks remain.
-      final verify = await runMetaflac(
-          ['blocks', 'list', '--json', tmpFile('test.flac')]);
-      final json =
-          jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      final verify =
+          await runMetaflac(['blocks', 'list', '--json', tmpFile('test.flac')]);
+      final json = jsonDecode(verify.stdout as String) as Map<String, dynamic>;
       final blocks = json['blocks'] as List;
       final paddingBlocks =
           blocks.where((b) => b['type'] == 'padding').toList();

@@ -80,7 +80,9 @@ void main() {
         Stream.fromIterable([input]),
       );
       final outStream = await transformer.transformStream(
-        mutations: [const SetTag('TITLE', ['Changed'])],
+        mutations: [
+          const SetTag('TITLE', ['Changed'])
+        ],
       );
       final outBytes = await collectStream(outStream);
 
@@ -126,8 +128,7 @@ void main() {
       expect(doc.pictures, hasLength(1));
       expect(doc.pictures.first.description, equals('added'));
       // Verify padding block exists
-      final paddingBlocks =
-          doc.blocks.whereType<PaddingBlock>().toList();
+      final paddingBlocks = doc.blocks.whereType<PaddingBlock>().toList();
       expect(paddingBlocks, hasLength(1));
       expect(paddingBlocks.first.payloadLength, equals(512));
     });
@@ -169,7 +170,9 @@ void main() {
         Stream.fromIterable([input]),
       );
       final outStream = await transformer.transformStream(
-        mutations: [const SetTag('GENRE', ['Classical'])],
+        mutations: [
+          const SetTag('GENRE', ['Classical'])
+        ],
       );
       final outBytes = await collectStream(outStream);
 
@@ -195,7 +198,9 @@ void main() {
 
       final transformer = FlacTransformer.fromStream(stream);
       final outStream = await transformer.transformStream(
-        mutations: [const SetTag('TITLE', ['StillChunky'])],
+        mutations: [
+          const SetTag('TITLE', ['StillChunky'])
+        ],
       );
       final outBytes = await collectStream(outStream);
 
@@ -367,7 +372,9 @@ void main() {
 
       final rewrittenStream = await StreamRewriter.rewrite(
         input: Stream.fromIterable([input]),
-        mutations: [const SetTag('TITLE', ['After'])],
+        mutations: [
+          const SetTag('TITLE', ['After'])
+        ],
       );
       final rewrittenBytes = await collectStream(rewrittenStream);
 
@@ -394,7 +401,9 @@ void main() {
       // Second transform via streaming.
       final transformer = FlacTransformer.fromBytes(intermediate);
       final outStream = await transformer.transformStream(
-        mutations: [const SetTag('ARTIST', ['StreamEdit'])],
+        mutations: [
+          const SetTag('ARTIST', ['StreamEdit'])
+        ],
       );
       final finalBytes = await collectStream(outStream);
 
@@ -419,7 +428,9 @@ void main() {
       // Step 1: stream transform.
       final t1 = FlacTransformer.fromBytes(input);
       final s1 = await t1.transformStream(
-        mutations: [const SetTag('TITLE', ['Step1'])],
+        mutations: [
+          const SetTag('TITLE', ['Step1'])
+        ],
       );
       final bytes1 = await collectStream(s1);
 
@@ -431,7 +442,9 @@ void main() {
       // Step 3: stream transform again.
       final t3 = FlacTransformer.fromBytes(bytes2);
       final s3 = await t3.transformStream(
-        mutations: [const SetTag('GENRE', ['Step3'])],
+        mutations: [
+          const SetTag('GENRE', ['Step3'])
+        ],
       );
       final finalBytes = await collectStream(s3);
 

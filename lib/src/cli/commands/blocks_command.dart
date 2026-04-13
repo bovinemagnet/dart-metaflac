@@ -36,8 +36,8 @@ class BlocksListCommand extends BaseFlacCommand {
       try {
         final file = File(filePath);
         if (!file.existsSync()) {
-          writeError(filePath, 'File not found: $filePath',
-              'FileSystemException');
+          writeError(
+              filePath, 'File not found: $filePath', 'FileSystemException');
           anyError = true;
           if (!continueOnError) return 4;
           continue;
@@ -48,17 +48,18 @@ class BlocksListCommand extends BaseFlacCommand {
         final prefix = withFilename(files) ? '$filePath: ' : '';
 
         if (useJson) {
-          final blockList = doc.blocks.map((block) => {
-                'type': block.type.name,
-                'typeCode': block.type.code,
-                'payloadSize': block.payloadLength,
-              }).toList();
+          final blockList = doc.blocks
+              .map((block) => {
+                    'type': block.type.name,
+                    'typeCode': block.type.code,
+                    'payloadSize': block.payloadLength,
+                  })
+              .toList();
           writeJson({'file': filePath, 'blocks': blockList});
         } else {
           for (var i = 0; i < doc.blocks.length; i++) {
             final block = doc.blocks[i];
-            writeLine(
-                '${prefix}BLOCK $i: type=${block.type.name} '
+            writeLine('${prefix}BLOCK $i: type=${block.type.name} '
                 '(${block.type.code}), size=${block.payloadLength}');
           }
         }

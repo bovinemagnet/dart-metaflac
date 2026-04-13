@@ -71,10 +71,8 @@ final class VorbisComments {
   /// removed, and the new values are appended at the end.
   VorbisComments set(String key, List<String> values) {
     final canonical = key.toUpperCase();
-    final retained =
-        entries.where((e) => e.canonicalKey != canonical).toList();
-    retained
-        .addAll(values.map((v) => VorbisCommentEntry(key: key, value: v)));
+    final retained = entries.where((e) => e.canonicalKey != canonical).toList();
+    retained.addAll(values.map((v) => VorbisCommentEntry(key: key, value: v)));
     return VorbisComments(vendorString: vendorString, entries: retained);
   }
 
@@ -95,8 +93,7 @@ final class VorbisComments {
     final canonical = key.toUpperCase();
     return VorbisComments(
       vendorString: vendorString,
-      entries:
-          entries.where((e) => e.canonicalKey != canonical).toList(),
+      entries: entries.where((e) => e.canonicalKey != canonical).toList(),
     );
   }
 
@@ -109,8 +106,7 @@ final class VorbisComments {
     return VorbisComments(
       vendorString: vendorString,
       entries: entries
-          .where(
-              (e) => !(e.canonicalKey == canonical && e.value == value))
+          .where((e) => !(e.canonicalKey == canonical && e.value == value))
           .toList(),
     );
   }
@@ -145,9 +141,8 @@ final class VorbisComments {
     final canonicalKeep = keepKeys.map((k) => k.toUpperCase()).toSet();
     return VorbisComments(
       vendorString: vendorString,
-      entries: entries
-          .where((e) => canonicalKeep.contains(e.canonicalKey))
-          .toList(),
+      entries:
+          entries.where((e) => canonicalKeep.contains(e.canonicalKey)).toList(),
     );
   }
 

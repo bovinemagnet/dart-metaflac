@@ -98,13 +98,15 @@ void main() {
       final blocks = json['blocks'] as List<dynamic>;
       final types =
           blocks.map((b) => (b as Map<String, dynamic>)['type']).toSet();
-      expect(types, containsAll([
-        'streamInfo',
-        'seekTable',
-        'vorbisComment',
-        'application',
-        'padding',
-      ]));
+      expect(
+          types,
+          containsAll([
+            'streamInfo',
+            'seekTable',
+            'vorbisComment',
+            'application',
+            'padding',
+          ]));
     });
 
     test('tags export outputs KEY=VALUE format', () async {
@@ -124,7 +126,10 @@ void main() {
     test('tags set adds a new tag, original tag preserved', () async {
       final path = copySiren();
       var result = await runMetaflac([
-        'tags', 'set', path, 'ARTIST=Test Artist',
+        'tags',
+        'set',
+        path,
+        'ARTIST=Test Artist',
       ]);
       expect(result.exitCode, equals(0));
 
@@ -137,7 +142,10 @@ void main() {
     test('tags add appends without replacing', () async {
       final path = copySiren();
       var result = await runMetaflac([
-        'tags', 'add', path, 'GENRE=Electronic',
+        'tags',
+        'add',
+        path,
+        'GENRE=Electronic',
       ]);
       expect(result.exitCode, equals(0));
 
@@ -150,7 +158,10 @@ void main() {
     test('tags remove deletes a specific tag', () async {
       final path = copySiren();
       var result = await runMetaflac([
-        'tags', 'remove', path, 'WAVEFORMATEXTENSIBLE_CHANNEL_MASK',
+        'tags',
+        'remove',
+        path,
+        'WAVEFORMATEXTENSIBLE_CHANNEL_MASK',
       ]);
       expect(result.exitCode, equals(0));
 
@@ -179,7 +190,10 @@ void main() {
       );
 
       var result = await runMetaflac([
-        'tags', 'import', '--from=$tagFile', path,
+        'tags',
+        'import',
+        '--from=$tagFile',
+        path,
       ]);
       expect(result.exitCode, equals(0));
 
@@ -195,12 +209,18 @@ void main() {
 
       // Add some tags first
       await runMetaflac([
-        'tags', 'set', path, 'ARTIST=Round Trip',
+        'tags',
+        'set',
+        path,
+        'ARTIST=Round Trip',
       ]);
 
       // Export
       var result = await runMetaflac([
-        'tags', 'export', '--output=$exportFile', path,
+        'tags',
+        'export',
+        '--output=$exportFile',
+        path,
       ]);
       expect(result.exitCode, equals(0));
 
@@ -214,7 +234,10 @@ void main() {
 
       // Import
       result = await runMetaflac([
-        'tags', 'import', '--from=$exportFile', path,
+        'tags',
+        'import',
+        '--from=$exportFile',
+        path,
       ]);
       expect(result.exitCode, equals(0));
 
@@ -252,14 +275,20 @@ void main() {
 
       // Add picture
       var result = await runMetaflac([
-        'picture', 'add', '--file=$pngPath', path,
+        'picture',
+        'add',
+        '--file=$pngPath',
+        path,
       ]);
       expect(result.exitCode, equals(0));
 
       // Export picture
       final exportPath = '${tmpDir.path}/exported.png';
       result = await runMetaflac([
-        'picture', 'export', '--output=$exportPath', path,
+        'picture',
+        'export',
+        '--output=$exportPath',
+        path,
       ]);
       expect(result.exitCode, equals(0));
 
@@ -272,12 +301,51 @@ void main() {
       final path = copySiren();
       final pngPath = '${tmpDir.path}/cover.png';
       File(pngPath).writeAsBytesSync(Uint8List.fromList([
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE,
-        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
-        0xAE, 0x42, 0x60, 0x82,
+        0x89,
+        0x50,
+        0x4E,
+        0x47,
+        0x0D,
+        0x0A,
+        0x1A,
+        0x0A,
+        0x00,
+        0x00,
+        0x00,
+        0x0D,
+        0x49,
+        0x48,
+        0x44,
+        0x52,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x00,
+        0x00,
+        0x00,
+        0x01,
+        0x08,
+        0x02,
+        0x00,
+        0x00,
+        0x00,
+        0x90,
+        0x77,
+        0x53,
+        0xDE,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x49,
+        0x45,
+        0x4E,
+        0x44,
+        0xAE,
+        0x42,
+        0x60,
+        0x82,
       ]));
 
       // Add then remove
@@ -370,7 +438,11 @@ void main() {
       final beforeBytes = File(path).readAsBytesSync();
 
       final result = await runMetaflac([
-        'tags', 'set', '--dry-run', path, 'ARTIST=Dry',
+        'tags',
+        'set',
+        '--dry-run',
+        path,
+        'ARTIST=Dry',
       ]);
       expect(result.exitCode, equals(0));
 
@@ -381,7 +453,12 @@ void main() {
     test('--dry-run --json reports planned mutations', () async {
       final path = copySiren();
       final result = await runMetaflac([
-        'tags', 'set', '--dry-run', '--json', path, 'ARTIST=Dry',
+        'tags',
+        'set',
+        '--dry-run',
+        '--json',
+        path,
+        'ARTIST=Dry',
       ]);
       expect(result.exitCode, equals(0));
 
@@ -392,7 +469,11 @@ void main() {
     test('--quiet suppresses stdout on write', () async {
       final path = copySiren();
       final result = await runMetaflac([
-        'tags', 'set', '--quiet', path, 'ARTIST=Quiet',
+        'tags',
+        'set',
+        '--quiet',
+        path,
+        'ARTIST=Quiet',
       ]);
       expect(result.exitCode, equals(0));
       expect((result.stdout as String).trim(), isEmpty);
@@ -404,7 +485,11 @@ void main() {
       File(path).setLastModifiedSync(oldTime);
 
       final result = await runMetaflac([
-        'tags', 'set', '--preserve-modtime', path, 'ARTIST=Preserved',
+        'tags',
+        'set',
+        '--preserve-modtime',
+        path,
+        'ARTIST=Preserved',
       ]);
       expect(result.exitCode, equals(0));
 
@@ -415,7 +500,9 @@ void main() {
     test('--with-filename includes filename in output', () async {
       final path = copySiren();
       final result = await runMetaflac([
-        'inspect', '--with-filename', path,
+        'inspect',
+        '--with-filename',
+        path,
       ]);
       expect(result.exitCode, equals(0));
       expect(result.stdout as String, contains('siren.flac'));
@@ -430,7 +517,10 @@ void main() {
       final path2 = copySirenTo(tmpDir, name: 'copy2.flac');
 
       final result = await runMetaflac([
-        'inspect', '--json', path1, path2,
+        'inspect',
+        '--json',
+        path1,
+        path2,
       ]);
       expect(result.exitCode, equals(0));
     });
@@ -441,7 +531,11 @@ void main() {
       File(badPath).writeAsBytesSync(Uint8List.fromList([0, 1, 2, 3]));
 
       final result = await runMetaflac([
-        'inspect', '--json', '--continue-on-error', goodPath, badPath,
+        'inspect',
+        '--json',
+        '--continue-on-error',
+        goodPath,
+        badPath,
       ]);
       // Should process the good file even though the bad one fails
       final output = result.stdout as String;

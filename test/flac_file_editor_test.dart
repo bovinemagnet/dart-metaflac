@@ -51,25 +51,31 @@ void main() {
   group('FlacFileEditor.updateFile', () {
     test('safeAtomic writes updated tags', () async {
       final bytes = buildFlac(
-        vorbisComment: _makeVorbisBlock({'ARTIST': ['Original']}),
+        vorbisComment: _makeVorbisBlock({
+          'ARTIST': ['Original']
+        }),
       );
       final path = '${tempDir.path}/test.flac';
       File(path).writeAsBytesSync(bytes);
 
       await FlacFileEditor.updateFile(
         path,
-        mutations: [const SetTag('ARTIST', ['Updated'])],
+        mutations: [
+          const SetTag('ARTIST', ['Updated'])
+        ],
         options: const FlacWriteOptions(writeMode: WriteMode.safeAtomic),
       );
 
       final doc = FlacParser.parseBytes(File(path).readAsBytesSync());
-      expect(doc.vorbisComment?.comments.valuesOf('ARTIST'),
-          equals(['Updated']));
+      expect(
+          doc.vorbisComment?.comments.valuesOf('ARTIST'), equals(['Updated']));
     });
 
     test('outputToNewFile writes to new path, original unchanged', () async {
       final bytes = buildFlac(
-        vorbisComment: _makeVorbisBlock({'TITLE': ['Old']}),
+        vorbisComment: _makeVorbisBlock({
+          'TITLE': ['Old']
+        }),
       );
       final originalPath = '${tempDir.path}/original.flac';
       final outputPath = '${tempDir.path}/output.flac';
@@ -77,7 +83,9 @@ void main() {
 
       await FlacFileEditor.updateFile(
         originalPath,
-        mutations: [const SetTag('TITLE', ['New'])],
+        mutations: [
+          const SetTag('TITLE', ['New'])
+        ],
         options: FlacWriteOptions(
           writeMode: WriteMode.outputToNewFile,
           outputPath: outputPath,
@@ -87,14 +95,12 @@ void main() {
       // Original unchanged.
       final origDoc =
           FlacParser.parseBytes(File(originalPath).readAsBytesSync());
-      expect(origDoc.vorbisComment?.comments.valuesOf('TITLE'),
-          equals(['Old']));
+      expect(
+          origDoc.vorbisComment?.comments.valuesOf('TITLE'), equals(['Old']));
 
       // Output has new value.
-      final outDoc =
-          FlacParser.parseBytes(File(outputPath).readAsBytesSync());
-      expect(
-          outDoc.vorbisComment?.comments.valuesOf('TITLE'), equals(['New']));
+      final outDoc = FlacParser.parseBytes(File(outputPath).readAsBytesSync());
+      expect(outDoc.vorbisComment?.comments.valuesOf('TITLE'), equals(['New']));
     });
 
     test('inPlaceIfPossible succeeds when metadata shrinks', () async {
@@ -170,7 +176,9 @@ void main() {
 
     test('preserveModTime preserves modification time', () async {
       final bytes = buildFlac(
-        vorbisComment: _makeVorbisBlock({'ARTIST': ['Test']}),
+        vorbisComment: _makeVorbisBlock({
+          'ARTIST': ['Test']
+        }),
       );
       final path = '${tempDir.path}/test.flac';
       File(path).writeAsBytesSync(bytes);
@@ -181,7 +189,9 @@ void main() {
 
       await FlacFileEditor.updateFile(
         path,
-        mutations: [const SetTag('ARTIST', ['New Artist'])],
+        mutations: [
+          const SetTag('ARTIST', ['New Artist'])
+        ],
         options: const FlacWriteOptions(preserveModTime: true),
       );
 
@@ -194,7 +204,9 @@ void main() {
 
     test('multiple mutations applied correctly', () async {
       final bytes = buildFlac(
-        vorbisComment: _makeVorbisBlock({'ARTIST': ['Old']}),
+        vorbisComment: _makeVorbisBlock({
+          'ARTIST': ['Old']
+        }),
       );
       final path = '${tempDir.path}/test.flac';
       File(path).writeAsBytesSync(bytes);

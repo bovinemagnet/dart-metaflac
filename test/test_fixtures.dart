@@ -48,8 +48,7 @@ Uint8List buildFlac({
   siData[3] = 0;
   siData[10] = (sr >> 12) & 0xFF;
   siData[11] = (sr >> 4) & 0xFF;
-  siData[12] =
-      ((sr & 0xF) << 4) | ((ch & 0x7) << 1) | ((bps >> 4) & 0x1);
+  siData[12] = ((sr & 0xF) << 4) | ((ch & 0x7) << 1) | ((bps >> 4) & 0x1);
   siData[13] = ((bps & 0xF) << 4) | ((ts >> 32) & 0xF);
   siData[14] = (ts >> 24) & 0xFF;
   siData[15] = (ts >> 16) & 0xFF;

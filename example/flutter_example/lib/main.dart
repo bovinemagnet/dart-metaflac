@@ -65,8 +65,7 @@ class _FlacTagViewerState extends State<FlacTagViewer> {
     if (vc == null) return const [];
 
     return [
-      for (final entry in vc.comments.entries)
-        MapEntry(entry.key, entry.value),
+      for (final entry in vc.comments.entries) MapEntry(entry.key, entry.value),
     ];
   }
 

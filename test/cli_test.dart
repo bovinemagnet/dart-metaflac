@@ -35,8 +35,7 @@ Uint8List buildFlac({
   siData[3] = 0;
   siData[10] = (sr >> 12) & 0xFF;
   siData[11] = (sr >> 4) & 0xFF;
-  siData[12] =
-      ((sr & 0xF) << 4) | ((ch & 0x7) << 1) | ((bps >> 4) & 0x1);
+  siData[12] = ((sr & 0xF) << 4) | ((ch & 0x7) << 1) | ((bps >> 4) & 0x1);
   siData[13] = ((bps & 0xF) << 4) | ((ts >> 32) & 0xF);
   siData[14] = (ts >> 24) & 0xFF;
   siData[15] = (ts >> 16) & 0xFF;
@@ -236,8 +235,8 @@ void main() {
       );
       writeFlac('test.flac', flac);
 
-      final result = await runCli(
-          ['--export-tags-to=-', '--json', tmpFile('test.flac')]);
+      final result =
+          await runCli(['--export-tags-to=-', '--json', tmpFile('test.flac')]);
       expect(result.exitCode, equals(0));
 
       final json = jsonDecode(result.stdout as String) as Map<String, dynamic>;
@@ -335,8 +334,7 @@ void main() {
     });
 
     test('exit code 4 for missing file', () async {
-      final result =
-          await runCli(['--list', tmpFile('nonexistent.flac')]);
+      final result = await runCli(['--list', tmpFile('nonexistent.flac')]);
       expect(result.exitCode, equals(4));
     });
 
@@ -372,8 +370,7 @@ void main() {
       final result = await runCli(['--list', '--json', tmpFile('bad.flac')]);
       expect(result.exitCode, equals(3));
 
-      final json =
-          jsonDecode(result.stderr as String) as Map<String, dynamic>;
+      final json = jsonDecode(result.stderr as String) as Map<String, dynamic>;
       expect(json, contains('error'));
       expect(json, contains('file'));
     });

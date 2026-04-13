@@ -8,8 +8,7 @@ import 'commands/tags_command.dart';
 
 /// Command runner for the metaflac CLI subcommand interface.
 class MetaflacCommandRunner extends CommandRunner<int> {
-  MetaflacCommandRunner()
-      : super('metaflac', 'FLAC metadata editor') {
+  MetaflacCommandRunner() : super('metaflac', 'FLAC metadata editor') {
     addCommand(InspectCommand());
     addCommand(BlocksCommand());
     addCommand(TagsCommand());

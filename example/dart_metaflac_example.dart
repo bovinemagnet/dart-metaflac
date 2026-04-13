@@ -77,10 +77,20 @@ Uint8List _buildSampleFlac() {
   out.add([0x00, 0x00, 0x00, 34]);
   out.add(siData);
   // Vorbis comment block header (not last)
-  out.add([0x04, (vcData.length >> 16) & 0xFF, (vcData.length >> 8) & 0xFF, vcData.length & 0xFF]);
+  out.add([
+    0x04,
+    (vcData.length >> 16) & 0xFF,
+    (vcData.length >> 8) & 0xFF,
+    vcData.length & 0xFF
+  ]);
   out.add(vcData);
   // Padding block header (last)
-  out.add([0x81, (paddingSize >> 16) & 0xFF, (paddingSize >> 8) & 0xFF, paddingSize & 0xFF]);
+  out.add([
+    0x81,
+    (paddingSize >> 16) & 0xFF,
+    (paddingSize >> 8) & 0xFF,
+    paddingSize & 0xFF
+  ]);
   out.add(Uint8List(paddingSize));
   // Fake audio frame
   out.add([0xFF, 0xF8]);

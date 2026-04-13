@@ -43,8 +43,8 @@ class TagsListCommand extends BaseFlacCommand {
       try {
         final file = File(filePath);
         if (!file.existsSync()) {
-          writeError(filePath, 'File not found: $filePath',
-              'FileSystemException');
+          writeError(
+              filePath, 'File not found: $filePath', 'FileSystemException');
           anyError = true;
           if (!continueOnError) return 4;
           continue;
@@ -324,8 +324,8 @@ class TagsImportCommand extends BaseFlacCommand {
 
     final tagFile = File(fromPath);
     if (!tagFile.existsSync()) {
-      writeError(fromPath, 'Tag file not found: $fromPath',
-          'FileSystemException');
+      writeError(
+          fromPath, 'Tag file not found: $fromPath', 'FileSystemException');
       return 4;
     }
 

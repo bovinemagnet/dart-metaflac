@@ -59,8 +59,7 @@ void main() {
 
     test('with_padding.flac contains a 4096-byte PADDING block', () {
       final doc = FlacMetadataDocument.readFromBytes(load('with_padding.flac'));
-      final padding =
-          doc.blocks.whereType<PaddingBlock>().toList();
+      final padding = doc.blocks.whereType<PaddingBlock>().toList();
       expect(padding, hasLength(1));
       expect(padding.first.size, equals(4096));
     });
@@ -90,7 +89,8 @@ void main() {
   group('malformed fixtures', () {
     test('bad_magic.flac is rejected as invalid FLAC', () {
       expect(
-        () => FlacMetadataDocument.readFromBytes(load('malformed/bad_magic.flac')),
+        () => FlacMetadataDocument.readFromBytes(
+            load('malformed/bad_magic.flac')),
         throwsA(isA<InvalidFlacException>()),
       );
     });

@@ -55,8 +55,7 @@ final class SeekTableBlock extends FlacMetadataBlock {
     final bd = ByteData.sublistView(out);
     var offset = 0;
     for (final point in points) {
-      bd.setUint32(
-          offset, (point.sampleNumber >> 32) & 0xFFFFFFFF, Endian.big);
+      bd.setUint32(offset, (point.sampleNumber >> 32) & 0xFFFFFFFF, Endian.big);
       offset += 4;
       bd.setUint32(offset, point.sampleNumber & 0xFFFFFFFF, Endian.big);
       offset += 4;

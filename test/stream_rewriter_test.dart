@@ -35,7 +35,9 @@ void main() {
 
       final outputStream = await StreamRewriter.rewrite(
         input: input,
-        mutations: [const SetTag('TITLE', ['New Title'])],
+        mutations: [
+          const SetTag('TITLE', ['New Title'])
+        ],
       );
       final output = await collectStream(outputStream);
 
@@ -142,16 +144,21 @@ void main() {
       // Feed in small chunks
       final chunks = <List<int>>[];
       for (var i = 0; i < bytes.length; i += 50) {
-        chunks.add(bytes.sublist(i, i + 50 > bytes.length ? bytes.length : i + 50));
+        chunks.add(
+            bytes.sublist(i, i + 50 > bytes.length ? bytes.length : i + 50));
       }
 
-      final transformer = FlacTransformer.fromStream(Stream.fromIterable(chunks));
+      final transformer =
+          FlacTransformer.fromStream(Stream.fromIterable(chunks));
       final outputStream = await transformer.transformStream(
-        mutations: [const SetTag('TITLE', ['Stream Updated'])],
+        mutations: [
+          const SetTag('TITLE', ['Stream Updated'])
+        ],
       );
       final result = await collectStream(outputStream);
       final doc = FlacParser.parseBytes(result);
-      expect(doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['Stream Updated']));
+      expect(doc.vorbisComment!.comments.valuesOf('TITLE'),
+          equals(['Stream Updated']));
     });
 
     test('transformStream from bytes source works too', () async {
@@ -162,7 +169,8 @@ void main() {
       );
       final result = await collectStream(outputStream);
       final doc = FlacParser.parseBytes(result);
-      expect(doc.vorbisComment!.comments.valuesOf('ARTIST'), equals(['Bytes Source']));
+      expect(doc.vorbisComment!.comments.valuesOf('ARTIST'),
+          equals(['Bytes Source']));
     });
   });
 }

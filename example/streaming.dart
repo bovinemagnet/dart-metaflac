@@ -54,7 +54,8 @@ Future<void> main() async {
   final verified = FlacMetadataDocument.readFromBytes(
     Uint8List.fromList(streamedOutput),
   );
-  print('Verified title: ${verified.vorbisComment?.comments.valuesOf('TITLE')}');
+  print(
+      'Verified title: ${verified.vorbisComment?.comments.valuesOf('TITLE')}');
 }
 
 Uint8List _buildFlacWithTags() {
@@ -83,7 +84,12 @@ Uint8List _buildFlacWithTags() {
   out.add([0x66, 0x4C, 0x61, 0x43]);
   out.add([0x00, 0x00, 0x00, 34]);
   out.add(siData);
-  out.add([0x04, (vcData.length >> 16) & 0xFF, (vcData.length >> 8) & 0xFF, vcData.length & 0xFF]);
+  out.add([
+    0x04,
+    (vcData.length >> 16) & 0xFF,
+    (vcData.length >> 8) & 0xFF,
+    vcData.length & 0xFF
+  ]);
   out.add(vcData);
   out.add([0x81, 0x00, 0x04, 0x00]);
   out.add(Uint8List(1024));

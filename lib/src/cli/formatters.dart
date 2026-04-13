@@ -14,9 +14,8 @@ void printMetadata(FlacMetadataDocument doc, String prefix) {
   stdout.writeln('$prefix  channels: ${si.channelCount}');
   stdout.writeln('$prefix  bits_per_sample: ${si.bitsPerSample}');
   stdout.writeln('$prefix  total_samples: ${si.totalSamples}');
-  final md5Hex = si.md5Signature
-      .map((b) => b.toRadixString(16).padLeft(2, '0'))
-      .join();
+  final md5Hex =
+      si.md5Signature.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   stdout.writeln('$prefix  md5sum: $md5Hex');
 
   final vc = doc.vorbisComment;
@@ -43,12 +42,10 @@ void printMetadata(FlacMetadataDocument doc, String prefix) {
 }
 
 /// Converts metadata to a JSON-serialisable map.
-Map<String, dynamic> metadataToJson(
-    FlacMetadataDocument doc, String filePath) {
+Map<String, dynamic> metadataToJson(FlacMetadataDocument doc, String filePath) {
   final si = doc.streamInfo;
-  final md5Hex = si.md5Signature
-      .map((b) => b.toRadixString(16).padLeft(2, '0'))
-      .join();
+  final md5Hex =
+      si.md5Signature.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   final result = <String, dynamic>{
     'file': filePath,

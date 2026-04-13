@@ -124,8 +124,8 @@ void main() {
       final updatedBytes = FlacSerializer.serialize(updated.blocks, audioData);
 
       final doc2 = FlacParser.parseBytes(updatedBytes);
-      expect(
-          doc2.vorbisComment!.comments.valuesOf('TITLE'), equals(['New Title']));
+      expect(doc2.vorbisComment!.comments.valuesOf('TITLE'),
+          equals(['New Title']));
       expect(doc2.vorbisComment!.comments.valuesOf('ARTIST'),
           equals(['New Artist']));
     });
@@ -165,8 +165,8 @@ void main() {
       final updatedBytes = FlacSerializer.serialize(updated.blocks, audioData);
 
       final doc2 = FlacParser.parseBytes(updatedBytes);
-      expect(doc2.vorbisComment!.comments.valuesOf('TITLE'),
-          equals(['New Song']));
+      expect(
+          doc2.vorbisComment!.comments.valuesOf('TITLE'), equals(['New Song']));
     });
 
     test('preserves audio data after metadata update', () {

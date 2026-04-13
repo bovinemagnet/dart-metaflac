@@ -118,9 +118,8 @@ class FlacTransformer {
     required List<MetadataMutation> mutations,
     FlacTransformOptions options = FlacTransformOptions.defaults,
   }) async {
-    final inputStream = _bytes != null
-        ? Stream.fromIterable([_bytes!.toList()])
-        : _stream!;
+    final inputStream =
+        _bytes != null ? Stream.fromIterable([_bytes!.toList()]) : _stream!;
     return StreamRewriter.rewrite(
       input: inputStream,
       mutations: mutations,

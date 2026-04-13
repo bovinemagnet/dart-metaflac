@@ -40,7 +40,9 @@ void main() async {
     final transformer = FlacTransformer.fromBytes(flacBytes);
     final beforeStream = _currentMemoryEstimate();
     final streamOutput = await transformer.transformStream(
-      mutations: [SetTag('TITLE', ['Streamed'])],
+      mutations: [
+        SetTag('TITLE', ['Streamed'])
+      ],
     );
     final builder = BytesBuilder();
     await for (final chunk in streamOutput) {
@@ -95,9 +97,19 @@ Uint8List _buildFlac({
   out.add([0x66, 0x4C, 0x61, 0x43]);
   out.add([0x00, 0x00, 0x00, 34]);
   out.add(siData);
-  out.add([0x04, (vcData.length >> 16) & 0xFF, (vcData.length >> 8) & 0xFF, vcData.length & 0xFF]);
+  out.add([
+    0x04,
+    (vcData.length >> 16) & 0xFF,
+    (vcData.length >> 8) & 0xFF,
+    vcData.length & 0xFF
+  ]);
   out.add(vcData);
-  out.add([0x81, (paddingSize >> 16) & 0xFF, (paddingSize >> 8) & 0xFF, paddingSize & 0xFF]);
+  out.add([
+    0x81,
+    (paddingSize >> 16) & 0xFF,
+    (paddingSize >> 8) & 0xFF,
+    paddingSize & 0xFF
+  ]);
   out.add(Uint8List(paddingSize));
   out.add([0xFF, 0xF8]);
   out.add(Uint8List(audioSize));

@@ -65,7 +65,12 @@ Uint8List _buildFlacWithTags() {
   out.add([0x66, 0x4C, 0x61, 0x43]);
   out.add([0x00, 0x00, 0x00, 34]);
   out.add(siData);
-  out.add([0x84, (vcData.length >> 16) & 0xFF, (vcData.length >> 8) & 0xFF, vcData.length & 0xFF]);
+  out.add([
+    0x84,
+    (vcData.length >> 16) & 0xFF,
+    (vcData.length >> 8) & 0xFF,
+    vcData.length & 0xFF
+  ]);
   out.add(vcData);
   out.add([0xFF, 0xF8]);
   out.add(Uint8List(200));

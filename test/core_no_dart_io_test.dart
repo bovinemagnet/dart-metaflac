@@ -54,8 +54,7 @@ void main() {
     }
 
     expect(offenders, isEmpty,
-        reason:
-            'Files reachable from lib/dart_metaflac.dart must not import '
+        reason: 'Files reachable from lib/dart_metaflac.dart must not import '
             "dart:io. Offenders: $offenders");
   });
 }

@@ -23,8 +23,8 @@ class InspectCommand extends BaseFlacCommand {
       try {
         final file = File(filePath);
         if (!file.existsSync()) {
-          writeError(filePath, 'File not found: $filePath',
-              'FileSystemException');
+          writeError(
+              filePath, 'File not found: $filePath', 'FileSystemException');
           anyError = true;
           if (!continueOnError) return 4;
           continue;

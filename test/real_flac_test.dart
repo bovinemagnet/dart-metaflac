@@ -423,7 +423,9 @@ void main() {
     test('StreamRewriter.rewrite with real FLAC', () async {
       final outStream = await StreamRewriter.rewrite(
         input: Stream.value(originalBytes),
-        mutations: [const SetTag('TITLE', ['Rewritten'])],
+        mutations: [
+          const SetTag('TITLE', ['Rewritten'])
+        ],
       );
       final outBytes = await collectStream(outStream);
       final doc = FlacMetadataDocument.readFromBytes(outBytes);
@@ -444,7 +446,8 @@ void main() {
         chunks.add(originalBytes.sublist(i, end));
       }
 
-      final transformer = FlacTransformer.fromStream(Stream.fromIterable(chunks));
+      final transformer =
+          FlacTransformer.fromStream(Stream.fromIterable(chunks));
       final result = await transformer.transform(
         mutations: [const AddTag('CHUNKED', 'yes')],
       );

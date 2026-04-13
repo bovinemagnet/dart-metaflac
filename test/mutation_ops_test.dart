@@ -185,8 +185,8 @@ void main() {
     test('removeExactTagValue removes only the specified value', () {
       // Add a second artist first, then remove just the original
       final step1 = doc.edit((e) => e.addTag('ARTIST', 'Second Artist'));
-      final step2 = step1.edit(
-          (e) => e.removeExactTagValue('ARTIST', 'Original Artist'));
+      final step2 =
+          step1.edit((e) => e.removeExactTagValue('ARTIST', 'Original Artist'));
       final artists = step2.vorbisComment!.comments.valuesOf('ARTIST');
       expect(artists, equals(['Second Artist']));
     });
@@ -257,8 +257,7 @@ void main() {
 
     test('setPadding replaces existing padding', () {
       final updated = doc.edit((e) => e.setPadding(2048));
-      final paddingBlocks =
-          updated.blocks.whereType<PaddingBlock>().toList();
+      final paddingBlocks = updated.blocks.whereType<PaddingBlock>().toList();
       expect(paddingBlocks.length, equals(1));
       expect(paddingBlocks.first.size, equals(2048));
     });
@@ -277,8 +276,8 @@ void main() {
       });
       expect(updated.vorbisComment!.comments.valuesOf('TITLE'),
           equals(['Multi Updated']));
-      expect(updated.vorbisComment!.comments.valuesOf('GENRE'),
-          equals(['Rock']));
+      expect(
+          updated.vorbisComment!.comments.valuesOf('GENRE'), equals(['Rock']));
       expect(updated.vorbisComment!.comments.valuesOf('ARTIST'), isEmpty);
       final padding = updated.blocks.whereType<PaddingBlock>().first;
       expect(padding.size, equals(1024));

@@ -90,11 +90,21 @@ Uint8List _buildFlac({
   out.add(siData);
 
   final vcIsLast = paddingSize <= 0;
-  out.add([(vcIsLast ? 0x84 : 0x04), (vcData.length >> 16) & 0xFF, (vcData.length >> 8) & 0xFF, vcData.length & 0xFF]);
+  out.add([
+    (vcIsLast ? 0x84 : 0x04),
+    (vcData.length >> 16) & 0xFF,
+    (vcData.length >> 8) & 0xFF,
+    vcData.length & 0xFF
+  ]);
   out.add(vcData);
 
   if (paddingSize > 0) {
-    out.add([0x81, (paddingSize >> 16) & 0xFF, (paddingSize >> 8) & 0xFF, paddingSize & 0xFF]);
+    out.add([
+      0x81,
+      (paddingSize >> 16) & 0xFF,
+      (paddingSize >> 8) & 0xFF,
+      paddingSize & 0xFF
+    ]);
     out.add(Uint8List(paddingSize));
   }
 

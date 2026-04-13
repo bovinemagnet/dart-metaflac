@@ -72,8 +72,7 @@ final class FlacMetadataDocument {
   ///
   /// Throws [StateError] if the document contains zero or more than one
   /// [StreamInfoBlock].
-  StreamInfoBlock get streamInfo =>
-      blocks.whereType<StreamInfoBlock>().single;
+  StreamInfoBlock get streamInfo => blocks.whereType<StreamInfoBlock>().single;
 
   /// The [VorbisCommentBlock] if present, or `null` otherwise.
   ///
@@ -157,8 +156,7 @@ final class FlacMetadataDocument {
   ///   editor.setTag('TITLE', ['New Title']);
   /// });
   /// ```
-  FlacMetadataDocument edit(
-      void Function(FlacMetadataEditor editor) updates) {
+  FlacMetadataDocument edit(void Function(FlacMetadataEditor editor) updates) {
     final editor = FlacMetadataEditor.fromDocument(this);
     updates(editor);
     final built = editor.build();

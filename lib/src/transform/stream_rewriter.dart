@@ -67,8 +67,7 @@ class StreamRewriter {
     final updated = editor.build();
 
     // Serialise new metadata only.
-    final newMetadata =
-        FlacSerializer.serializeMetadataOnly(updated.blocks);
+    final newMetadata = FlacSerializer.serializeMetadataOnly(updated.blocks);
 
     // Emit metadata then audio chunks.
     final controller = StreamController<List<int>>();
@@ -101,9 +100,8 @@ class StreamRewriter {
     while (offset + flacMetadataHeaderSize <= data.length) {
       final headerByte = data[offset];
       final isLast = (headerByte & 0x80) != 0;
-      final payloadLength = (data[offset + 1] << 16) |
-          (data[offset + 2] << 8) |
-          data[offset + 3];
+      final payloadLength =
+          (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
       final blockEnd = offset + flacMetadataHeaderSize + payloadLength;
 
       if (blockEnd > data.length) {

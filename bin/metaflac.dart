@@ -35,24 +35,17 @@ Future<void> main(List<String> args) async {
     ..addFlag('show-md5', help: 'Show MD5 from STREAMINFO')
     ..addFlag('show-md5sum',
         help: 'Show MD5 from STREAMINFO (metaflac-compatible alias)')
-    ..addFlag('show-min-blocksize',
-        help: 'Show STREAMINFO minimum block size')
-    ..addFlag('show-max-blocksize',
-        help: 'Show STREAMINFO maximum block size')
-    ..addFlag('show-min-framesize',
-        help: 'Show STREAMINFO minimum frame size')
-    ..addFlag('show-max-framesize',
-        help: 'Show STREAMINFO maximum frame size')
+    ..addFlag('show-min-blocksize', help: 'Show STREAMINFO minimum block size')
+    ..addFlag('show-max-blocksize', help: 'Show STREAMINFO maximum block size')
+    ..addFlag('show-min-framesize', help: 'Show STREAMINFO minimum frame size')
+    ..addFlag('show-max-framesize', help: 'Show STREAMINFO maximum frame size')
     ..addFlag('show-sample-rate', help: 'Show STREAMINFO sample rate')
     ..addFlag('show-channels', help: 'Show STREAMINFO channel count')
     ..addFlag('show-bps', help: 'Show STREAMINFO bits per sample')
-    ..addFlag('show-total-samples',
-        help: 'Show STREAMINFO total sample count')
+    ..addFlag('show-total-samples', help: 'Show STREAMINFO total sample count')
     // ── Vorbis comment show-ops ─────────────────────────────────────────
-    ..addFlag('show-vendor-tag',
-        help: 'Show the VORBIS_COMMENT vendor string')
-    ..addOption('show-tag',
-        help: 'Show all values for a specific tag (NAME)')
+    ..addFlag('show-vendor-tag', help: 'Show the VORBIS_COMMENT vendor string')
+    ..addOption('show-tag', help: 'Show all values for a specific tag (NAME)')
     ..addFlag('show-all-tags',
         help: 'Show all Vorbis comment tags (alias for export to stdout)')
     // ── Existing read/write ops ─────────────────────────────────────────
@@ -90,8 +83,7 @@ Future<void> main(List<String> args) async {
     ..addFlag('dry-run',
         help: 'Show what would change without writing', negatable: false)
     ..addFlag('continue-on-error',
-        help: 'Continue processing remaining files on error',
-        negatable: false)
+        help: 'Continue processing remaining files on error', negatable: false)
     ..addFlag('quiet',
         abbr: 'q', help: 'Suppress normal output', negatable: false);
 
@@ -158,16 +150,16 @@ Future<int> _processFile({
   try {
     final file = File(filePath);
     if (!file.existsSync()) {
-      _reportError(filePath, 'File not found: $filePath',
-          'FileSystemException', useJson);
+      _reportError(filePath, 'File not found: $filePath', 'FileSystemException',
+          useJson);
       return _exitIoError;
     }
 
     // --no-filename beats --with-filename and defaults to on for a
     // single input, off for multiple (matching metaflac).
     final noFilename = results['no-filename'] as bool;
-    final withFilename = !noFilename &&
-        (results['with-filename'] as bool || files.length > 1);
+    final withFilename =
+        !noFilename && (results['with-filename'] as bool || files.length > 1);
     final prefix = withFilename ? '$filePath: ' : '';
 
     final preserveModtime = results['preserve-modtime'] as bool;
@@ -189,8 +181,7 @@ Future<int> _processFile({
       return _exitSuccess;
     }
 
-    if ((results['show-md5'] as bool) ||
-        (results['show-md5sum'] as bool)) {
+    if ((results['show-md5'] as bool) || (results['show-md5sum'] as bool)) {
       final md5Hex = doc.streamInfo.md5Signature
           .map((b) => b.toRadixString(16).padLeft(2, '0'))
           .join();
@@ -234,8 +225,7 @@ Future<int> _processFile({
     }
     if (scalarKey != null) {
       if (useJson) {
-        _write(
-            jsonEncode({'file': filePath, scalarKey: scalarValue}), quiet);
+        _write(jsonEncode({'file': filePath, scalarKey: scalarValue}), quiet);
       } else {
         _write('$prefix$scalarValue', quiet);
       }
@@ -245,8 +235,7 @@ Future<int> _processFile({
     if (results['show-vendor-tag'] as bool) {
       final vendor = doc.vorbisComment?.comments.vendorString ?? '';
       if (useJson) {
-        _write(jsonEncode({'file': filePath, 'vendorString': vendor}),
-            quiet);
+        _write(jsonEncode({'file': filePath, 'vendorString': vendor}), quiet);
       } else {
         _write('$prefix$vendor', quiet);
       }
@@ -255,12 +244,10 @@ Future<int> _processFile({
 
     final showTag = results['show-tag'] as String?;
     if (showTag != null) {
-      final values = doc.vorbisComment?.comments.valuesOf(showTag) ??
-          const <String>[];
+      final values =
+          doc.vorbisComment?.comments.valuesOf(showTag) ?? const <String>[];
       if (useJson) {
-        _write(
-            jsonEncode(
-                {'file': filePath, 'tag': showTag, 'values': values}),
+        _write(jsonEncode({'file': filePath, 'tag': showTag, 'values': values}),
             quiet);
       } else {
         for (final v in values) {
@@ -273,7 +260,8 @@ Future<int> _processFile({
     if (results['show-all-tags'] as bool) {
       final vc = doc.vorbisComment;
       if (useJson) {
-        final tags = vc?.comments.asMultiMap() ?? const <String, List<String>>{};
+        final tags =
+            vc?.comments.asMultiMap() ?? const <String, List<String>>{};
         _write(jsonEncode({'file': filePath, 'tags': tags}), quiet);
       } else if (vc != null) {
         for (final entry in vc.comments.entries) {
@@ -339,8 +327,7 @@ Future<int> _processFile({
     final removeAllTagsExcept = results['remove-all-tags-except'] as String?;
     final removeReplayGain = results['remove-replay-gain'] as bool;
     final setTags = results['set-tag'] as List<String>;
-    final setTagFromFile =
-        results['set-tag-from-file'] as List<String>;
+    final setTagFromFile = results['set-tag-from-file'] as List<String>;
     final importTagsFrom = results['import-tags-from'] as String?;
     final importPictureFrom = results['import-picture-from'] as String?;
 
@@ -478,9 +465,8 @@ Future<int> _processFile({
     // --output-name (-o) switches to outputToNewFile mode.
     // --dont-use-padding forces a full rewrite by setting explicit
     // padding to zero and using safeAtomic (no in-place overwrite).
-    final writeMode = outputName != null
-        ? WriteMode.outputToNewFile
-        : WriteMode.safeAtomic;
+    final writeMode =
+        outputName != null ? WriteMode.outputToNewFile : WriteMode.safeAtomic;
     await FlacFileEditor.updateFile(
       filePath,
       mutations: mutations,
@@ -539,8 +525,7 @@ Future<int> _processFile({
     _reportError(filePath, e.message, 'InvalidFlacException', useJson);
     return _exitInvalidFlac;
   } on MalformedMetadataException catch (e) {
-    _reportError(
-        filePath, e.message, 'MalformedMetadataException', useJson);
+    _reportError(filePath, e.message, 'MalformedMetadataException', useJson);
     return _exitInvalidFlac;
   } on FlacIoException catch (e) {
     _reportError(filePath, e.message, 'FlacIoException', useJson);
@@ -565,8 +550,7 @@ void _write(String message, bool quiet) {
   }
 }
 
-void _reportError(
-    String filePath, String message, String type, bool useJson) {
+void _reportError(String filePath, String message, String type, bool useJson) {
   if (useJson) {
     stderr.writeln(jsonEncode({
       'file': filePath,
@@ -583,9 +567,8 @@ void _reportError(
 Map<String, dynamic> _metadataToJson(
     FlacMetadataDocument doc, String filePath) {
   final si = doc.streamInfo;
-  final md5Hex = si.md5Signature
-      .map((b) => b.toRadixString(16).padLeft(2, '0'))
-      .join();
+  final md5Hex =
+      si.md5Signature.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
   final result = <String, dynamic>{
     'file': filePath,
@@ -654,16 +637,14 @@ void _printMetadata(FlacMetadataDocument doc, String prefix) {
   stdout.writeln('$prefix  channels: ${si.channelCount}');
   stdout.writeln('$prefix  bits_per_sample: ${si.bitsPerSample}');
   stdout.writeln('$prefix  total_samples: ${si.totalSamples}');
-  final md5Hex = si.md5Signature
-      .map((b) => b.toRadixString(16).padLeft(2, '0'))
-      .join();
+  final md5Hex =
+      si.md5Signature.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
   stdout.writeln('$prefix  md5sum: $md5Hex');
 
   final vc = doc.vorbisComment;
   if (vc != null) {
     stdout.writeln('${prefix}VORBIS_COMMENT:');
-    stdout
-        .writeln('$prefix  vendor_string: ${vc.comments.vendorString}');
+    stdout.writeln('$prefix  vendor_string: ${vc.comments.vendorString}');
     for (final entry in vc.comments.entries) {
       stdout.writeln('$prefix  ${entry.key}=${entry.value}');
     }

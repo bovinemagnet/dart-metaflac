@@ -25,8 +25,7 @@ import 'mutation_ops.dart';
 /// See also: [MetadataMutation] for the full list of supported operations.
 class FlacMetadataEditor {
   /// Create an editor seeded with the blocks from [_source].
-  FlacMetadataEditor.fromDocument(this._source)
-      : _mutations = [];
+  FlacMetadataEditor.fromDocument(this._source) : _mutations = [];
 
   final FlacMetadataDocument _source;
   final List<MetadataMutation> _mutations;
@@ -41,8 +40,7 @@ class FlacMetadataEditor {
   ///
   /// Enqueues an [AddTag] mutation. Existing values for [key] are
   /// preserved.
-  void addTag(String key, String value) =>
-      _mutations.add(AddTag(key, value));
+  void addTag(String key, String value) => _mutations.add(AddTag(key, value));
 
   /// Remove all entries for [key] from the Vorbis comments.
   ///
@@ -64,13 +62,13 @@ class FlacMetadataEditor {
   /// Append a [PictureBlock] to the metadata.
   ///
   /// Enqueues an [AddPicture] mutation.
-  void addPicture(PictureBlock picture) =>
-      _mutations.add(AddPicture(picture));
+  void addPicture(PictureBlock picture) => _mutations.add(AddPicture(picture));
 
   /// Replace all pictures of [pictureType] with [replacement].
   ///
   /// Enqueues a [ReplacePictureByType] mutation.
-  void replacePictureByType(PictureType pictureType, PictureBlock replacement) =>
+  void replacePictureByType(
+          PictureType pictureType, PictureBlock replacement) =>
       _mutations.add(ReplacePictureByType(
           pictureType: pictureType, replacement: replacement));
 
@@ -126,8 +124,7 @@ class FlacMetadataEditor {
         return _updateVorbisComments(
             blocks, (vc) => vc.removeExact(m.key, m.value));
       case RemoveFirstTag m:
-        return _updateVorbisComments(
-            blocks, (vc) => vc.removeFirst(m.key));
+        return _updateVorbisComments(blocks, (vc) => vc.removeFirst(m.key));
       case ClearTags _:
         return _updateVorbisComments(blocks, (vc) => vc.clear());
       case ClearTagsExcept m:
@@ -150,8 +147,7 @@ class FlacMetadataEditor {
       case RemoveAllPictures _:
         return blocks.where((b) => b is! PictureBlock).toList();
       case SetPadding m:
-        final withoutPadding =
-            blocks.where((b) => b is! PaddingBlock).toList();
+        final withoutPadding = blocks.where((b) => b is! PaddingBlock).toList();
         if (m.size > 0) return [...withoutPadding, PaddingBlock(m.size)];
         return withoutPadding;
     }
@@ -161,8 +157,7 @@ class FlacMetadataEditor {
     List<FlacMetadataBlock> blocks,
     VorbisComments Function(VorbisComments) update,
   ) {
-    final existing =
-        blocks.whereType<VorbisCommentBlock>().firstOrNull;
+    final existing = blocks.whereType<VorbisCommentBlock>().firstOrNull;
     final existingComments = existing?.comments ??
         VorbisComments(vendorString: 'dart_metaflac', entries: []);
     final newComments = update(existingComments);
@@ -182,9 +177,7 @@ class FlacMetadataEditor {
       if (!inserted) result.add(newBlock);
       return result;
     } else {
-      return blocks
-          .map((b) => b is VorbisCommentBlock ? newBlock : b)
-          .toList();
+      return blocks.map((b) => b is VorbisCommentBlock ? newBlock : b).toList();
     }
   }
 }

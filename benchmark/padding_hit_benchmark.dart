@@ -20,8 +20,7 @@ void main() {
   ]);
 
   _benchmark('Set 5 tags', flacBytes, [
-    for (var i = 0; i < 5; i++)
-      SetTag('TAG$i', ['Updated Value $i']),
+    for (var i = 0; i < 5; i++) SetTag('TAG$i', ['Updated Value $i']),
   ]);
 
   _benchmark('Add + remove tags', flacBytes, [
@@ -30,7 +29,8 @@ void main() {
   ]);
 }
 
-void _benchmark(String label, Uint8List flacBytes, List<MetadataMutation> mutations) {
+void _benchmark(
+    String label, Uint8List flacBytes, List<MetadataMutation> mutations) {
   const warmup = 100;
   const iterations = 1000;
 
@@ -86,9 +86,19 @@ Uint8List _buildFlac({required int tagCount, required int paddingSize}) {
   out.add([0x66, 0x4C, 0x61, 0x43]);
   out.add([0x00, 0x00, 0x00, 34]);
   out.add(siData);
-  out.add([0x04, (vcData.length >> 16) & 0xFF, (vcData.length >> 8) & 0xFF, vcData.length & 0xFF]);
+  out.add([
+    0x04,
+    (vcData.length >> 16) & 0xFF,
+    (vcData.length >> 8) & 0xFF,
+    vcData.length & 0xFF
+  ]);
   out.add(vcData);
-  out.add([0x81, (paddingSize >> 16) & 0xFF, (paddingSize >> 8) & 0xFF, paddingSize & 0xFF]);
+  out.add([
+    0x81,
+    (paddingSize >> 16) & 0xFF,
+    (paddingSize >> 8) & 0xFF,
+    paddingSize & 0xFF
+  ]);
   out.add(Uint8List(paddingSize));
   out.add([0xFF, 0xF8]);
   out.add(Uint8List(200));

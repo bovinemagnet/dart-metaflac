@@ -16,7 +16,8 @@ import 'test_fixtures.dart';
 void main() {
   group('FlacTransformer.fromBytes', () {
     test('readMetadata returns correct STREAMINFO', () async {
-      final bytes = buildFlac(sampleRate: 48000, channels: 1, bitsPerSample: 24);
+      final bytes =
+          buildFlac(sampleRate: 48000, channels: 1, bitsPerSample: 24);
       final transformer = FlacTransformer.fromBytes(bytes);
       final doc = await transformer.readMetadata();
       expect(doc.streamInfo.sampleRate, equals(48000));
@@ -34,13 +35,17 @@ void main() {
         ),
       );
       final result = await FlacTransformer.fromBytes(bytes).transform(
-        mutations: [const SetTag('TITLE', ['New Title'])],
+        mutations: [
+          const SetTag('TITLE', ['New Title'])
+        ],
       );
       final doc = FlacParser.parseBytes(result.bytes);
-      expect(doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['New Title']));
+      expect(
+          doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['New Title']));
     });
 
-    test('transform plan fitsExistingRegion is true when metadata shrinks', () async {
+    test('transform plan fitsExistingRegion is true when metadata shrinks',
+        () async {
       // Build a FLAC with many large tags + padding.
       // Clearing all tags makes the VC block much smaller, so the new metadata
       // region (same PaddingBlock, smaller VC) is smaller than the original.
@@ -69,7 +74,9 @@ void main() {
     test('transform plan detects full rewrite when no padding', () async {
       final bytes = buildFlac(paddingSize: -1);
       final result = await FlacTransformer.fromBytes(bytes).transform(
-        mutations: [const SetTag('TITLE', ['Forced Rewrite'])],
+        mutations: [
+          const SetTag('TITLE', ['Forced Rewrite'])
+        ],
       );
       // No padding means metadata grows → full rewrite
       expect(result.plan.requiresFullRewrite, isTrue);
@@ -78,7 +85,9 @@ void main() {
     test('transform result document has updated blocks', () async {
       final bytes = buildFlac(paddingSize: 512);
       final result = await FlacTransformer.fromBytes(bytes).transform(
-        mutations: [const SetTag('ALBUM', ['Test Album'])],
+        mutations: [
+          const SetTag('ALBUM', ['Test Album'])
+        ],
       );
       expect(
         result.document.vorbisComment!.comments.valuesOf('ALBUM'),
@@ -103,8 +112,7 @@ void main() {
     test('readMetadata works from stream input', () async {
       final bytes = buildFlac(sampleRate: 44100);
       final stream = Stream.fromIterable([bytes.toList()]);
-      final doc =
-          await FlacTransformer.fromStream(stream).readMetadata();
+      final doc = await FlacTransformer.fromStream(stream).readMetadata();
       expect(doc.streamInfo.sampleRate, equals(44100));
     });
 
@@ -123,11 +131,9 @@ void main() {
         mutations: [const AddTag('ARTIST', 'Stream Artist')],
       );
       final doc = FlacParser.parseBytes(result.bytes);
-      expect(
-          doc.vorbisComment!.comments.valuesOf('TITLE'),
+      expect(doc.vorbisComment!.comments.valuesOf('TITLE'),
           equals(['Stream Title']));
-      expect(
-          doc.vorbisComment!.comments.valuesOf('ARTIST'),
+      expect(doc.vorbisComment!.comments.valuesOf('ARTIST'),
           equals(['Stream Artist']));
     });
   });
@@ -184,8 +190,7 @@ void main() {
       final result = await transformFlac(bytes, [const RemoveTag('COMMENT')]);
       final doc = FlacParser.parseBytes(result.bytes);
       expect(doc.vorbisComment!.comments.valuesOf('COMMENT'), isEmpty);
-      expect(
-          doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['Keep']));
+      expect(doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['Keep']));
     });
 
     test('applies AddPicture mutation', () async {
@@ -269,7 +274,8 @@ void main() {
         const SetPadding(4096),
       ]);
       final doc = FlacParser.parseBytes(result.bytes);
-      expect(doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['Updated']));
+      expect(
+          doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['Updated']));
       expect(doc.vorbisComment!.comments.valuesOf('COMMENT'), isEmpty);
       expect(doc.vorbisComment!.comments.valuesOf('GENRE'), equals(['Jazz']));
       final padding = doc.blocks.whereType<PaddingBlock>().first;
@@ -325,8 +331,7 @@ void main() {
         const SetTag('TITLE', ['Via Stream']),
       ]);
       final doc = FlacParser.parseBytes(outBytes);
-      expect(
-          doc.vorbisComment!.comments.valuesOf('TITLE'),
+      expect(doc.vorbisComment!.comments.valuesOf('TITLE'),
           equals(['Via Stream']));
     });
   });
@@ -360,9 +365,12 @@ void main() {
 
       expect(doc.streamInfo.sampleRate, equals(96000));
       expect(doc.streamInfo.bitsPerSample, equals(24));
-      expect(doc.vorbisComment!.comments.vendorString, equals('round-trip-test'));
-      expect(doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['Round Trip']));
-      expect(doc.vorbisComment!.comments.valuesOf('GENRE'), equals(['Classical']));
+      expect(
+          doc.vorbisComment!.comments.vendorString, equals('round-trip-test'));
+      expect(doc.vorbisComment!.comments.valuesOf('TITLE'),
+          equals(['Round Trip']));
+      expect(
+          doc.vorbisComment!.comments.valuesOf('GENRE'), equals(['Classical']));
       expect(doc.pictures.first.description, equals('Original Cover'));
       expect(doc.pictures.first.width, equals(400));
     });
@@ -371,9 +379,13 @@ void main() {
       final bytes = buildFlac(paddingSize: 2048);
 
       // First mutation pass
-      final r1 = await transformFlac(bytes, [const SetTag('TITLE', ['Pass 1'])]);
+      final r1 = await transformFlac(bytes, [
+        const SetTag('TITLE', ['Pass 1'])
+      ]);
       // Second mutation pass on already-modified bytes
-      final r2 = await transformFlac(r1.bytes, [const SetTag('TITLE', ['Pass 2'])]);
+      final r2 = await transformFlac(r1.bytes, [
+        const SetTag('TITLE', ['Pass 2'])
+      ]);
 
       final doc = FlacParser.parseBytes(r2.bytes);
       expect(doc.vorbisComment!.comments.valuesOf('TITLE'), equals(['Pass 2']));
