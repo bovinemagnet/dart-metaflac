@@ -159,4 +159,29 @@ void main() {
       expect(updated.blocks.length, original);
     });
   });
+
+  group('RemoveBlocksByNumber', () {
+    test('removes blocks at the given indices', () {
+      // Fixture layout: 0=STREAMINFO, 1=VORBIS_COMMENT, 2=PICTURE, 3=PADDING
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      final updated = doc.edit((e) => e.removeBlocksByNumber({2}));
+      expect(updated.blocks.whereType<PictureBlock>(), isEmpty);
+      expect(updated.blocks.whereType<VorbisCommentBlock>().length, 1);
+    });
+
+    test('index 0 (STREAMINFO) is silently skipped', () {
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      final originalLen = doc.blocks.length;
+      final updated = doc.edit((e) => e.removeBlocksByNumber({0}));
+      expect(updated.blocks.length, originalLen);
+      expect(updated.blocks.whereType<StreamInfoBlock>().length, 1);
+    });
+
+    test('out-of-range indices are ignored', () {
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      final originalLen = doc.blocks.length;
+      final updated = doc.edit((e) => e.removeBlocksByNumber({99}));
+      expect(updated.blocks.length, originalLen);
+    });
+  });
 }

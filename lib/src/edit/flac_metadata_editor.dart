@@ -100,6 +100,13 @@ class FlacMetadataEditor {
   void removeBlocksByType(Set<FlacBlockType> types) =>
       _mutations.add(RemoveBlocksByType(types));
 
+  /// Remove blocks at the given 0-based [indices].
+  ///
+  /// Enqueues a [RemoveBlocksByNumber] mutation. Index 0 (STREAMINFO) is
+  /// silently skipped; out-of-range indices are ignored.
+  void removeBlocksByNumber(Set<int> indices) =>
+      _mutations.add(RemoveBlocksByNumber(indices));
+
   /// Apply a single [MetadataMutation] immediately.
   void applyMutation(MetadataMutation mutation) => _mutations.add(mutation);
 
@@ -169,6 +176,14 @@ class FlacMetadataEditor {
         }
         if (m.types.isEmpty) return blocks;
         return blocks.where((b) => !m.types.contains(b.type)).toList();
+      case RemoveBlocksByNumber m:
+        final toKeep = <FlacMetadataBlock>[];
+        for (var i = 0; i < blocks.length; i++) {
+          if (i == 0 || !m.indices.contains(i)) {
+            toKeep.add(blocks[i]);
+          }
+        }
+        return toKeep;
     }
   }
 
