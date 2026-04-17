@@ -87,9 +87,9 @@ class BlocksListCommand extends BaseFlacCommand {
         final prefix = withFilename(files) ? '$filePath: ' : '';
 
         bool keep(int i, FlacMetadataBlock b) {
-          if (showTypes != null && !showTypes!.contains(b.type)) return false;
-          if (hideTypes != null && hideTypes!.contains(b.type)) return false;
-          if (showIndices != null && !showIndices!.contains(i)) return false;
+          if (showTypes != null && !showTypes.contains(b.type)) return false;
+          if (hideTypes != null && hideTypes.contains(b.type)) return false;
+          if (showIndices != null && !showIndices.contains(i)) return false;
           return true;
         }
 
