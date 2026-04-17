@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../error/exceptions.dart';
 import '../model/flac_block_type.dart';
 import '../model/flac_metadata_block.dart';
@@ -6,6 +8,7 @@ import '../model/padding_block.dart';
 import '../model/picture_block.dart';
 import '../model/picture_type.dart';
 import '../model/stream_info_block.dart';
+import '../model/unknown_block.dart';
 import '../model/vorbis_comment_block.dart';
 import '../model/vorbis_comments.dart';
 import 'mutation_ops.dart';
@@ -113,6 +116,18 @@ class FlacMetadataEditor {
   void removeAllNonStreamInfo() =>
       _mutations.add(const RemoveAllNonStreamInfo());
 
+  /// Append a pre-serialised block with the given [type] and [payload].
+  ///
+  /// Enqueues an [AppendRawBlock] mutation. See [AppendRawBlock] for
+  /// positioning rules.
+  void appendRawBlock(FlacBlockType type, Uint8List payload,
+          {int? afterIndex}) =>
+      _mutations.add(AppendRawBlock(
+        type: type,
+        payload: payload,
+        afterIndex: afterIndex,
+      ));
+
   /// Apply a single [MetadataMutation] immediately.
   void applyMutation(MetadataMutation mutation) => _mutations.add(mutation);
 
@@ -192,6 +207,28 @@ class FlacMetadataEditor {
         return toKeep;
       case RemoveAllNonStreamInfo _:
         return blocks.whereType<StreamInfoBlock>().toList();
+      case AppendRawBlock m:
+        final raw = UnknownBlock(
+          rawTypeCode: m.type.code,
+          rawPayload: Uint8List.fromList(m.payload),
+        );
+        if (m.afterIndex != null) {
+          final idx = m.afterIndex!;
+          if (idx >= blocks.length - 1) return [...blocks, raw];
+          return [
+            ...blocks.sublist(0, idx + 1),
+            raw,
+            ...blocks.sublist(idx + 1),
+          ];
+        }
+        if (blocks.isNotEmpty && blocks.last is PaddingBlock) {
+          return [
+            ...blocks.sublist(0, blocks.length - 1),
+            raw,
+            blocks.last,
+          ];
+        }
+        return [...blocks, raw];
     }
   }
 

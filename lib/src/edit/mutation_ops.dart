@@ -237,3 +237,34 @@ final class RemoveAllNonStreamInfo extends MetadataMutation {
   /// Create a mutation that strips all non-STREAMINFO blocks.
   const RemoveAllNonStreamInfo();
 }
+
+/// Append a pre-serialised metadata block to the document.
+///
+/// The [payload] bytes are written verbatim with a block header carrying
+/// [type]'s numeric code. The block is carried internally as an
+/// `UnknownBlock` so no payload validation is performed; callers are
+/// responsible for supplying well-formed bytes.
+///
+/// Position:
+/// - [afterIndex] `null` — append at the tail, before any trailing
+///   `PaddingBlock`.
+/// - [afterIndex] `0` — insert immediately after STREAMINFO.
+/// - [afterIndex] `n > 0` — insert after the block currently at index `n`.
+///   If `n >= blocks.length`, append at the tail.
+final class AppendRawBlock extends MetadataMutation {
+  /// Create a mutation that appends a raw block.
+  const AppendRawBlock({
+    required this.type,
+    required this.payload,
+    this.afterIndex,
+  });
+
+  /// The block type code that the serialiser should write.
+  final FlacBlockType type;
+
+  /// The pre-serialised block payload (excluding the 4-byte block header).
+  final Uint8List payload;
+
+  /// Where to insert the block. See class docs for semantics.
+  final int? afterIndex;
+}

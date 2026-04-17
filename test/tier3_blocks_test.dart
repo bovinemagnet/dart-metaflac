@@ -193,4 +193,52 @@ void main() {
       expect(updated.blocks.single, isA<StreamInfoBlock>());
     });
   });
+
+  group('AppendRawBlock', () {
+    test('append with afterIndex null inserts before trailing PADDING', () {
+      final payload = Uint8List.fromList([0xAA, 0xBB, 0xCC, 0xDD]);
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      final updated =
+          doc.edit((e) => e.appendRawBlock(FlacBlockType.application, payload));
+      expect(updated.blocks.last, isA<PaddingBlock>());
+      final unknown = updated.blocks.whereType<UnknownBlock>().single;
+      expect(unknown.rawTypeCode, FlacBlockType.application.code);
+      expect(unknown.rawPayload, payload);
+    });
+
+    test('append with explicit afterIndex 0 inserts after STREAMINFO', () {
+      final payload = Uint8List.fromList([1, 2, 3]);
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      final updated = doc.edit((e) => e.appendRawBlock(
+            FlacBlockType.seekTable,
+            payload,
+            afterIndex: 0,
+          ));
+      expect(updated.blocks[1], isA<UnknownBlock>());
+      expect((updated.blocks[1] as UnknownBlock).rawTypeCode,
+          FlacBlockType.seekTable.code);
+    });
+
+    test('afterIndex beyond length appends at end', () {
+      final payload = Uint8List.fromList([9]);
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      final updated = doc.edit((e) => e.appendRawBlock(
+            FlacBlockType.application,
+            payload,
+            afterIndex: 99,
+          ));
+      expect(updated.blocks.last, isA<UnknownBlock>());
+    });
+
+    test('bytes round-trip through serialise + reparse', () {
+      final payload = Uint8List.fromList([0x11, 0x22, 0x33, 0x44, 0x55]);
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      final updated =
+          doc.edit((e) => e.appendRawBlock(FlacBlockType.application, payload));
+      final bytes = updated.toBytes();
+      final reparsed = FlacParser.parseBytes(bytes);
+      final app = reparsed.blocks.whereType<ApplicationBlock>().singleOrNull;
+      expect(app, isNotNull);
+    });
+  });
 }
