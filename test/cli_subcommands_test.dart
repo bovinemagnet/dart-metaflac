@@ -731,6 +731,72 @@ void main() {
     });
   });
 
+  group('blocks list filters', () {
+    Uint8List fullFlac() => buildFlac(
+          vorbisComment: VorbisCommentBlock(
+            comments: VorbisComments(
+              vendorString: 'v',
+              entries: [VorbisCommentEntry(key: 'T', value: 'x')],
+            ),
+          ),
+          pictures: [
+            PictureBlock(
+              pictureType: PictureType.frontCover,
+              mimeType: 'image/jpeg',
+              description: '',
+              width: 0,
+              height: 0,
+              colorDepth: 0,
+              indexedColors: 0,
+              data: Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]),
+            ),
+          ],
+        );
+
+    test('--block-type=PICTURE shows only picture blocks', () async {
+      writeFlac('list-filter.flac', fullFlac());
+      final result = await runMetaflac([
+        'blocks',
+        'list',
+        '--block-type=PICTURE',
+        tmpFile('list-filter.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+      final out = result.stdout as String;
+      expect(out, contains('picture'));
+      expect(out, isNot(contains('streamInfo')));
+    });
+
+    test('--block-number preserves original indices', () async {
+      writeFlac('list-num.flac', fullFlac());
+      final result = await runMetaflac([
+        'blocks',
+        'list',
+        '--block-number=2',
+        tmpFile('list-num.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+      final out = result.stdout as String;
+      expect(out, contains('BLOCK 2'));
+      expect(out, isNot(contains('BLOCK 0')));
+    });
+
+    test('--except-block-type hides listed types', () async {
+      writeFlac('list-except.flac', fullFlac());
+      final result = await runMetaflac([
+        'blocks',
+        'list',
+        '--except-block-type=PADDING,PICTURE',
+        tmpFile('list-except.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+      final out = result.stdout as String;
+      expect(out, contains('streamInfo'));
+      expect(out, isNot(contains('padding')));
+      expect(out, isNot(contains('picture')));
+    });
+  });
+
   group('blocks append', () {
     test('appends a raw block from a file', () async {
       writeFlac('append.flac', buildFlac());
