@@ -731,6 +731,35 @@ void main() {
     });
   });
 
+  group('blocks append', () {
+    test('appends a raw block from a file', () async {
+      writeFlac('append.flac', buildFlac());
+      final blockPath = tmpFile('raw.bin');
+      File(blockPath).writeAsBytesSync([0x41, 0x42, 0x43, 0x44, 0x00, 0x00]);
+
+      final result = await runMetaflac([
+        'blocks',
+        'append',
+        '--type=APPLICATION',
+        '--from-file=$blockPath',
+        tmpFile('append.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('append.flac')).readAsBytesSync());
+      final app = doc.blocks.whereType<ApplicationBlock>().singleOrNull;
+      expect(app, isNotNull);
+    });
+
+    test('requires --type and --from-file', () async {
+      writeFlac('append-missing.flac', buildFlac());
+      final result = await runMetaflac(
+          ['blocks', 'append', tmpFile('append-missing.flac')]);
+      expect(result.exitCode, equals(2));
+    });
+  });
+
   group('blocks remove-all', () {
     test('leaves only STREAMINFO', () async {
       writeFlac(

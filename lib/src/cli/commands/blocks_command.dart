@@ -13,6 +13,7 @@ class BlocksCommand extends Command<int> {
     addSubcommand(BlocksListCommand());
     addSubcommand(BlocksRemoveCommand());
     addSubcommand(BlocksRemoveAllCommand());
+    addSubcommand(BlocksAppendCommand());
   }
 
   @override
@@ -285,6 +286,115 @@ class BlocksRemoveAllCommand extends BaseFlacCommand {
           writeJson({'file': filePath, 'success': true});
         } else {
           writeLine('Removed all non-STREAMINFO blocks from $filePath');
+        }
+      } on FlacMetadataException catch (e) {
+        writeError(filePath, e.message, e.runtimeType.toString());
+        anyError = true;
+        if (!continueOnError) return exitCodeFor(e);
+      } on FileSystemException catch (e) {
+        writeError(filePath, e.message, 'FileSystemException');
+        anyError = true;
+        if (!continueOnError) return 4;
+      }
+    }
+    return anyError ? 1 : 0;
+  }
+}
+
+/// Appends a pre-serialised metadata block read from a binary file.
+class BlocksAppendCommand extends BaseFlacCommand {
+  BlocksAppendCommand() {
+    argParser
+      ..addOption('type',
+          help: 'Block type name for the appended block '
+              '(STREAMINFO, PADDING, APPLICATION, SEEKTABLE, '
+              'VORBIS_COMMENT, PICTURE)')
+      ..addOption('from-file',
+          help: 'Path to the file containing the raw block payload')
+      ..addOption('after',
+          help: '0-based index after which to insert the block. '
+              'Defaults to the end (before trailing PADDING).');
+  }
+
+  @override
+  String get name => 'append';
+
+  @override
+  String get description =>
+      'Append a pre-serialised metadata block from a file';
+
+  @override
+  Future<int> run() async {
+    final files = filePaths;
+    final typeStr = argResults!['type'] as String?;
+    final fromFile = argResults!['from-file'] as String?;
+    final afterStr = argResults!['after'] as String?;
+
+    if (typeStr == null || fromFile == null) {
+      throw UsageException(
+        '--type and --from-file are required.',
+        usage,
+      );
+    }
+
+    final Set<FlacBlockType> types;
+    try {
+      types = parseBlockTypes(typeStr);
+    } on ArgumentError catch (e) {
+      throw UsageException(e.message.toString(), usage);
+    }
+    if (types.length != 1) {
+      throw UsageException('--type must name exactly one block type.', usage);
+    }
+    final type = types.single;
+
+    final int? afterIndex = afterStr == null ? null : int.tryParse(afterStr);
+    if (afterStr != null && afterIndex == null) {
+      throw UsageException('--after must be an integer.', usage);
+    }
+
+    final blockFile = File(fromFile);
+    if (!blockFile.existsSync()) {
+      writeError(fromFile, 'Block file not found: $fromFile',
+          'FileSystemException');
+      return 4;
+    }
+    final payload = blockFile.readAsBytesSync();
+
+    var anyError = false;
+    for (final filePath in files) {
+      try {
+        final file = File(filePath);
+        if (!file.existsSync()) {
+          writeError(filePath, 'File not found: $filePath',
+              'FileSystemException');
+          anyError = true;
+          if (!continueOnError) return 4;
+          continue;
+        }
+
+        await FlacFileEditor.updateFile(
+          filePath,
+          mutations: [
+            AppendRawBlock(
+              type: type,
+              payload: payload,
+              afterIndex: afterIndex,
+            ),
+          ],
+          options: FlacWriteOptions(preserveModTime: preserveModtime),
+        );
+
+        if (useJson) {
+          writeJson({
+            'file': filePath,
+            'success': true,
+            'appendedBytes': payload.length,
+            'blockType': type.name,
+          });
+        } else {
+          writeLine('Appended ${payload.length} bytes of type ${type.name} '
+              'to $filePath');
         }
       } on FlacMetadataException catch (e) {
         writeError(filePath, e.message, e.runtimeType.toString());
