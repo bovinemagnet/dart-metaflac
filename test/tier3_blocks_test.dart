@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:dart_metaflac/dart_metaflac.dart';
+import 'package:dart_metaflac/src/cli/block_selection.dart';
 import 'package:test/test.dart';
 
 /// Builds a minimal FLAC containing STREAMINFO + one raw block with the
@@ -239,6 +240,44 @@ void main() {
       final reparsed = FlacParser.parseBytes(bytes);
       final app = reparsed.blocks.whereType<ApplicationBlock>().singleOrNull;
       expect(app, isNotNull);
+    });
+  });
+
+  group('parseBlockTypes', () {
+    test('parses comma-separated names case-insensitively', () {
+      expect(
+        parseBlockTypes('streaminfo,PICTURE,vorbis_comment'),
+        {
+          FlacBlockType.streamInfo,
+          FlacBlockType.picture,
+          FlacBlockType.vorbisComment,
+        },
+      );
+    });
+
+    test('rejects unknown names with an ArgumentError', () {
+      expect(() => parseBlockTypes('BOGUS'), throwsArgumentError);
+    });
+
+    test('ignores surrounding whitespace', () {
+      expect(
+        parseBlockTypes(' PICTURE , PADDING '),
+        {FlacBlockType.picture, FlacBlockType.padding},
+      );
+    });
+  });
+
+  group('parseBlockNumbers', () {
+    test('parses comma-separated integers', () {
+      expect(parseBlockNumbers('0,2,5'), {0, 2, 5});
+    });
+
+    test('rejects non-integer entries', () {
+      expect(() => parseBlockNumbers('0,foo'), throwsArgumentError);
+    });
+
+    test('rejects negative values', () {
+      expect(() => parseBlockNumbers('-1'), throwsArgumentError);
     });
   });
 }
