@@ -107,6 +107,12 @@ class FlacMetadataEditor {
   void removeBlocksByNumber(Set<int> indices) =>
       _mutations.add(RemoveBlocksByNumber(indices));
 
+  /// Remove every block except STREAMINFO.
+  ///
+  /// Enqueues a [RemoveAllNonStreamInfo] mutation.
+  void removeAllNonStreamInfo() =>
+      _mutations.add(const RemoveAllNonStreamInfo());
+
   /// Apply a single [MetadataMutation] immediately.
   void applyMutation(MetadataMutation mutation) => _mutations.add(mutation);
 
@@ -184,6 +190,8 @@ class FlacMetadataEditor {
           }
         }
         return toKeep;
+      case RemoveAllNonStreamInfo _:
+        return blocks.whereType<StreamInfoBlock>().toList();
     }
   }
 

@@ -184,4 +184,13 @@ void main() {
       expect(updated.blocks.length, originalLen);
     });
   });
+
+  group('RemoveAllNonStreamInfo', () {
+    test('leaves only STREAMINFO', () {
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      final updated = doc.edit((e) => e.removeAllNonStreamInfo());
+      expect(updated.blocks.length, 1);
+      expect(updated.blocks.single, isA<StreamInfoBlock>());
+    });
+  });
 }

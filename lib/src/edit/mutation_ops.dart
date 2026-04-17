@@ -229,3 +229,11 @@ final class RemoveBlocksByNumber extends MetadataMutation {
   /// The set of 0-based block indices to remove.
   final Set<int> indices;
 }
+
+/// Remove every metadata block except STREAMINFO.
+///
+/// Convenience for the upstream `metaflac --remove-all` flag.
+final class RemoveAllNonStreamInfo extends MetadataMutation {
+  /// Create a mutation that strips all non-STREAMINFO blocks.
+  const RemoveAllNonStreamInfo();
+}
