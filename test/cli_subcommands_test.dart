@@ -630,4 +630,131 @@ void main() {
       expect(paddingBlocks, isEmpty);
     });
   });
+
+  group('blocks remove', () {
+    Uint8List flacWithPictureAndPadding() => buildFlac(
+          vorbisComment: VorbisCommentBlock(
+            comments: VorbisComments(
+              vendorString: 'v',
+              entries: [VorbisCommentEntry(key: 'TITLE', value: 'T')],
+            ),
+          ),
+          pictures: [
+            PictureBlock(
+              pictureType: PictureType.frontCover,
+              mimeType: 'image/jpeg',
+              description: '',
+              width: 0,
+              height: 0,
+              colorDepth: 0,
+              indexedColors: 0,
+              data: Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]),
+            ),
+          ],
+        );
+
+    test('removes blocks by type', () async {
+      writeFlac('remove.flac', flacWithPictureAndPadding());
+      final result = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-type=PICTURE',
+        tmpFile('remove.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('remove.flac')).readAsBytesSync());
+      expect(doc.pictures, isEmpty);
+    });
+
+    test('removes blocks by number', () async {
+      writeFlac('remove-num.flac', flacWithPictureAndPadding());
+      // Layout: 0=STREAMINFO 1=VORBIS_COMMENT 2=PICTURE 3=PADDING
+      final result = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-number=2',
+        tmpFile('remove-num.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('remove-num.flac')).readAsBytesSync());
+      expect(doc.pictures, isEmpty);
+      expect(doc.vorbisComment, isNotNull);
+    });
+
+    test('fails without any selector flag', () async {
+      writeFlac('no-sel.flac', flacWithPictureAndPadding());
+      final result = await runMetaflac([
+        'blocks',
+        'remove',
+        tmpFile('no-sel.flac'),
+      ]);
+      expect(result.exitCode, equals(2));
+    });
+
+    test('rejects combining --block-type and --except-block-type', () async {
+      writeFlac('conflict.flac', flacWithPictureAndPadding());
+      final result = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-type=PICTURE',
+        '--except-block-type=PADDING',
+        tmpFile('conflict.flac'),
+      ]);
+      expect(result.exitCode, equals(2));
+    });
+
+    test('--except-block-type keeps only listed types plus STREAMINFO',
+        () async {
+      writeFlac('except.flac', flacWithPictureAndPadding());
+      final result = await runMetaflac([
+        'blocks',
+        'remove',
+        '--except-block-type=VORBIS_COMMENT',
+        tmpFile('except.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('except.flac')).readAsBytesSync());
+      for (final b in doc.blocks) {
+        expect(
+          b.type == FlacBlockType.streamInfo ||
+              b.type == FlacBlockType.vorbisComment,
+          isTrue,
+          reason: 'unexpected block: ${b.type}',
+        );
+      }
+    });
+  });
+
+  group('blocks remove-all', () {
+    test('leaves only STREAMINFO', () async {
+      writeFlac(
+        'remove-all.flac',
+        buildFlac(
+          vorbisComment: VorbisCommentBlock(
+            comments: VorbisComments(
+              vendorString: 'v',
+              entries: [VorbisCommentEntry(key: 'T', value: 'x')],
+            ),
+          ),
+        ),
+      );
+      final result = await runMetaflac([
+        'blocks',
+        'remove-all',
+        tmpFile('remove-all.flac'),
+      ]);
+      expect(result.exitCode, equals(0));
+
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('remove-all.flac')).readAsBytesSync());
+      expect(doc.blocks.length, equals(1));
+      expect(doc.blocks.single, isA<StreamInfoBlock>());
+    });
+  });
 }
