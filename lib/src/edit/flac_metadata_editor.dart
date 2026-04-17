@@ -1,3 +1,5 @@
+import '../error/exceptions.dart';
+import '../model/flac_block_type.dart';
 import '../model/flac_metadata_block.dart';
 import '../model/flac_metadata_document.dart';
 import '../model/padding_block.dart';
@@ -90,6 +92,14 @@ class FlacMetadataEditor {
   /// if [size] is zero).
   void setPadding(int size) => _mutations.add(SetPadding(size));
 
+  /// Remove all blocks whose type is in [types].
+  ///
+  /// Enqueues a [RemoveBlocksByType] mutation. STREAMINFO cannot be
+  /// removed — passing [FlacBlockType.streamInfo] causes
+  /// [FlacMetadataException] at [build] time.
+  void removeBlocksByType(Set<FlacBlockType> types) =>
+      _mutations.add(RemoveBlocksByType(types));
+
   /// Apply a single [MetadataMutation] immediately.
   void applyMutation(MetadataMutation mutation) => _mutations.add(mutation);
 
@@ -150,6 +160,15 @@ class FlacMetadataEditor {
         final withoutPadding = blocks.where((b) => b is! PaddingBlock).toList();
         if (m.size > 0) return [...withoutPadding, PaddingBlock(m.size)];
         return withoutPadding;
+      case RemoveBlocksByType m:
+        if (m.types.contains(FlacBlockType.streamInfo)) {
+          throw FlacMetadataException(
+            'Cannot remove STREAMINFO block — it is mandatory per the '
+            'FLAC specification.',
+          );
+        }
+        if (m.types.isEmpty) return blocks;
+        return blocks.where((b) => !m.types.contains(b.type)).toList();
     }
   }
 

@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import '../model/flac_block_type.dart';
 import '../model/picture_block.dart';
 import '../model/picture_type.dart';
 
@@ -195,4 +198,21 @@ final class SetPadding extends MetadataMutation {
   /// The desired padding size in bytes. A value of zero removes all
   /// padding.
   final int size;
+}
+
+/// Remove every metadata block whose [FlacBlockType] is in [types].
+///
+/// STREAMINFO (type 0) is mandatory per the FLAC specification. Including
+/// [FlacBlockType.streamInfo] in [types] is a programmer error: the editor
+/// throws [FlacMetadataException] at build time.
+///
+/// Unknown types (type code outside 0–6) may be targeted by including
+/// [FlacBlockType.unknown], which removes all blocks that the parser could
+/// not classify.
+final class RemoveBlocksByType extends MetadataMutation {
+  /// Create a mutation that removes blocks whose type is in [types].
+  const RemoveBlocksByType(this.types);
+
+  /// The set of block types to remove.
+  final Set<FlacBlockType> types;
 }
