@@ -147,8 +147,7 @@ void main() {
     test('throws when STREAMINFO is included', () {
       final doc = FlacMetadataDocument.readFromBytes(_fixture());
       expect(
-        () => doc.edit((e) =>
-            e.removeBlocksByType({FlacBlockType.streamInfo})),
+        () => doc.edit((e) => e.removeBlocksByType({FlacBlockType.streamInfo})),
         throwsA(isA<FlacMetadataException>()),
       );
     });

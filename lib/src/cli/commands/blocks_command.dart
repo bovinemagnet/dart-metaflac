@@ -27,8 +27,7 @@ class BlocksCommand extends Command<int> {
 class BlocksListCommand extends BaseFlacCommand {
   BlocksListCommand() {
     argParser
-      ..addOption('block-type',
-          help: 'Comma-separated block types to show')
+      ..addOption('block-type', help: 'Comma-separated block types to show')
       ..addOption('except-block-type',
           help: 'Comma-separated block types to hide')
       ..addOption('block-number',
@@ -141,8 +140,7 @@ class BlocksRemoveCommand extends BaseFlacCommand {
       ..addOption('block-number',
           help: 'Comma-separated 0-based block indices to remove')
       ..addFlag('dont-use-padding',
-          help: 'Do not reuse padding; force full rewrite',
-          negatable: false);
+          help: 'Do not reuse padding; force full rewrite', negatable: false);
   }
 
   @override
@@ -204,8 +202,7 @@ class BlocksRemoveCommand extends BaseFlacCommand {
         }
 
         if (blockNumber != null) {
-          mutations
-              .add(RemoveBlocksByNumber(parseBlockNumbers(blockNumber)));
+          mutations.add(RemoveBlocksByNumber(parseBlockNumbers(blockNumber)));
         }
 
         await FlacFileEditor.updateFile(
@@ -253,8 +250,7 @@ class BlocksRemoveAllCommand extends BaseFlacCommand {
   String get name => 'remove-all';
 
   @override
-  String get description =>
-      'Remove all metadata blocks except STREAMINFO';
+  String get description => 'Remove all metadata blocks except STREAMINFO';
 
   @override
   Future<int> run() async {
@@ -355,8 +351,8 @@ class BlocksAppendCommand extends BaseFlacCommand {
 
     final blockFile = File(fromFile);
     if (!blockFile.existsSync()) {
-      writeError(fromFile, 'Block file not found: $fromFile',
-          'FileSystemException');
+      writeError(
+          fromFile, 'Block file not found: $fromFile', 'FileSystemException');
       return 4;
     }
     final payload = blockFile.readAsBytesSync();
@@ -366,8 +362,8 @@ class BlocksAppendCommand extends BaseFlacCommand {
       try {
         final file = File(filePath);
         if (!file.existsSync()) {
-          writeError(filePath, 'File not found: $filePath',
-              'FileSystemException');
+          writeError(
+              filePath, 'File not found: $filePath', 'FileSystemException');
           anyError = true;
           if (!continueOnError) return 4;
           continue;

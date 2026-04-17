@@ -73,8 +73,7 @@ Future<void> main(List<String> args) async {
             '--block-number',
         negatable: false)
     ..addFlag('remove-all',
-        help: 'Remove all metadata blocks except STREAMINFO',
-        negatable: false)
+        help: 'Remove all metadata blocks except STREAMINFO', negatable: false)
     ..addOption('append',
         help: 'Append a raw metadata block from FILE (use with --block-type)',
         valueHelp: 'FILE')
@@ -82,8 +81,7 @@ Future<void> main(List<String> args) async {
         help: 'Block types (comma-separated), e.g. PICTURE,PADDING')
     ..addOption('except-block-type',
         help: 'Block types to keep (comma-separated)')
-    ..addOption('block-number',
-        help: '0-based block indices (comma-separated)')
+    ..addOption('block-number', help: '0-based block indices (comma-separated)')
     // ── Global options ──────────────────────────────────────────────────
     ..addOption('output-name',
         abbr: 'o',

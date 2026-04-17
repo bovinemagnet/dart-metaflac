@@ -51,7 +51,8 @@ class FlacSerializer {
       final block = blocks[i];
       final isLast = i == blocks.length - 1;
       final payload = block.toPayloadBytes();
-      final rawCode = block is UnknownBlock ? block.rawTypeCode : block.type.code;
+      final rawCode =
+          block is UnknownBlock ? block.rawTypeCode : block.type.code;
       final typeByte = rawCode & 0x7F;
       writer.writeUint8(isLast ? (0x80 | typeByte) : typeByte);
       writer.writeUint24(payload.length);

@@ -486,8 +486,8 @@ void main() {
       final path = buildFixtureWithPicture();
       final r = await runCli(['--remove', '--block-type=PICTURE', path]);
       expect(r.exitCode, 0);
-      final doc = FlacMetadataDocument.readFromBytes(
-          File(path).readAsBytesSync());
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
       expect(doc.pictures, isEmpty);
     });
 
@@ -495,8 +495,8 @@ void main() {
       final path = buildFixtureWithPicture();
       final r = await runCli(['--remove-all', path]);
       expect(r.exitCode, 0);
-      final doc = FlacMetadataDocument.readFromBytes(
-          File(path).readAsBytesSync());
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
       expect(doc.blocks.length, 1);
       expect(doc.blocks.single, isA<StreamInfoBlock>());
     });
@@ -511,8 +511,8 @@ void main() {
         path,
       ]);
       expect(r.exitCode, 0);
-      final doc = FlacMetadataDocument.readFromBytes(
-          File(path).readAsBytesSync());
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
       expect(doc.blocks.whereType<ApplicationBlock>(), isNotEmpty);
     });
 
