@@ -852,4 +852,154 @@ void main() {
       expect(doc.blocks.single, isA<StreamInfoBlock>());
     });
   });
+
+  group('Tier 3 extra coverage', () {
+    Uint8List flacFixture() => buildFlac(
+          vorbisComment: VorbisCommentBlock(
+            comments: VorbisComments(
+              vendorString: 'v',
+              entries: [VorbisCommentEntry(key: 'TITLE', value: 'x')],
+            ),
+          ),
+          pictures: [
+            PictureBlock(
+              pictureType: PictureType.frontCover,
+              mimeType: 'image/jpeg',
+              description: '',
+              width: 0,
+              height: 0,
+              colorDepth: 0,
+              indexedColors: 0,
+              data: Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]),
+            ),
+          ],
+        );
+
+    // ── --dry-run behaviour ────────────────────────────────────────────
+    test('blocks remove --dry-run does not modify the file', () async {
+      writeFlac('dry.flac', flacFixture());
+      final before = File(tmpFile('dry.flac')).readAsBytesSync();
+      final r = await runMetaflac([
+        'blocks',
+        'remove',
+        '--dry-run',
+        '--block-type=PICTURE',
+        tmpFile('dry.flac'),
+      ]);
+      expect(r.exitCode, 0);
+      final after = File(tmpFile('dry.flac')).readAsBytesSync();
+      expect(after, equals(before),
+          reason: 'file should be byte-identical after --dry-run');
+    });
+
+    test('blocks remove-all --dry-run does not modify the file', () async {
+      writeFlac('dry-all.flac', flacFixture());
+      final before = File(tmpFile('dry-all.flac')).readAsBytesSync();
+      final r = await runMetaflac([
+        'blocks',
+        'remove-all',
+        '--dry-run',
+        tmpFile('dry-all.flac'),
+      ]);
+      expect(r.exitCode, 0);
+      final after = File(tmpFile('dry-all.flac')).readAsBytesSync();
+      expect(after, equals(before));
+    });
+
+    test('blocks append --dry-run does not modify the file', () async {
+      writeFlac('dry-append.flac', flacFixture());
+      final blockPath = tmpFile('raw.bin');
+      File(blockPath).writeAsBytesSync([0x41, 0x42, 0x43, 0x44]);
+      final before = File(tmpFile('dry-append.flac')).readAsBytesSync();
+      final r = await runMetaflac([
+        'blocks',
+        'append',
+        '--dry-run',
+        '--type=APPLICATION',
+        '--from-file=$blockPath',
+        tmpFile('dry-append.flac'),
+      ]);
+      expect(r.exitCode, 0);
+      final after = File(tmpFile('dry-append.flac')).readAsBytesSync();
+      expect(after, equals(before));
+    });
+
+    // ── blocks append --after=N ────────────────────────────────────────
+    test('blocks append --after=0 inserts immediately after STREAMINFO',
+        () async {
+      writeFlac('after.flac', flacFixture());
+      final blockPath = tmpFile('raw-after.bin');
+      File(blockPath).writeAsBytesSync([0x41, 0x42, 0x43, 0x44, 0x99]);
+      final r = await runMetaflac([
+        'blocks',
+        'append',
+        '--type=APPLICATION',
+        '--from-file=$blockPath',
+        '--after=0',
+        tmpFile('after.flac'),
+      ]);
+      expect(r.exitCode, 0);
+
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('after.flac')).readAsBytesSync());
+      // Block 0 is STREAMINFO; block 1 must now be the appended block,
+      // which parses back as an ApplicationBlock.
+      expect(doc.blocks[1], isA<ApplicationBlock>());
+    });
+
+    // ── Union: --block-type + --block-number ───────────────────────────
+    test('blocks remove with both --block-type and --block-number unions',
+        () async {
+      writeFlac('union.flac', flacFixture());
+      // Layout: 0=STREAMINFO 1=VORBIS_COMMENT 2=PICTURE 3=PADDING.
+      // Removing type=PICTURE + number=1 should strip both VC and PICTURE.
+      final r = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-type=PICTURE',
+        '--block-number=1',
+        tmpFile('union.flac'),
+      ]);
+      expect(r.exitCode, 0);
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('union.flac')).readAsBytesSync());
+      expect(doc.pictures, isEmpty);
+      expect(doc.vorbisComment, isNull);
+    });
+
+    // ── Invalid block-type name ────────────────────────────────────────
+    test('blocks remove --block-type=BOGUS exits 2', () async {
+      writeFlac('bogus.flac', flacFixture());
+      final r = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-type=BOGUS',
+        tmpFile('bogus.flac'),
+      ]);
+      expect(r.exitCode, equals(2));
+    });
+
+    // ── --continue-on-error across multiple files ─────────────────────
+    test('blocks remove --continue-on-error processes good files after bad',
+        () async {
+      writeFlac('good.flac', flacFixture());
+      final badPath = tmpFile('bad.flac');
+      File(badPath).writeAsBytesSync(Uint8List.fromList([0, 1, 2, 3]));
+
+      final r = await runMetaflac([
+        'blocks',
+        'remove',
+        '--continue-on-error',
+        '--block-type=PICTURE',
+        badPath,
+        tmpFile('good.flac'),
+      ]);
+      // Overall exit is non-zero because of the bad file, but the good
+      // file should have been processed.
+      expect(r.exitCode, isNot(0));
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('good.flac')).readAsBytesSync());
+      expect(doc.pictures, isEmpty);
+    });
+  });
 }

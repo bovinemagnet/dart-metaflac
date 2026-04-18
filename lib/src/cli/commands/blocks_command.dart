@@ -205,6 +205,20 @@ class BlocksRemoveCommand extends BaseFlacCommand {
           mutations.add(RemoveBlocksByNumber(parseBlockNumbers(blockNumber)));
         }
 
+        if (dryRun) {
+          if (useJson) {
+            writeJson({
+              'file': filePath,
+              'dryRun': true,
+              'mutationsApplied': mutations.length,
+            });
+          } else {
+            writeLine('Dry run: ${mutations.length} mutation(s) would be '
+                'applied to $filePath');
+          }
+          continue;
+        }
+
         await FlacFileEditor.updateFile(
           filePath,
           mutations: mutations,
@@ -266,6 +280,17 @@ class BlocksRemoveAllCommand extends BaseFlacCommand {
               filePath, 'File not found: $filePath', 'FileSystemException');
           anyError = true;
           if (!continueOnError) return 4;
+          continue;
+        }
+
+        if (dryRun) {
+          if (useJson) {
+            writeJson(
+                {'file': filePath, 'dryRun': true, 'mutationsApplied': 1});
+          } else {
+            writeLine(
+                'Dry run: would remove all non-STREAMINFO blocks from $filePath');
+          }
           continue;
         }
 
@@ -366,6 +391,21 @@ class BlocksAppendCommand extends BaseFlacCommand {
               filePath, 'File not found: $filePath', 'FileSystemException');
           anyError = true;
           if (!continueOnError) return 4;
+          continue;
+        }
+
+        if (dryRun) {
+          if (useJson) {
+            writeJson({
+              'file': filePath,
+              'dryRun': true,
+              'wouldAppendBytes': payload.length,
+              'blockType': type.name,
+            });
+          } else {
+            writeLine('Dry run: would append ${payload.length} bytes of '
+                'type ${type.name} to $filePath');
+          }
           continue;
         }
 

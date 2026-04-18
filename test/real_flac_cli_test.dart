@@ -639,5 +639,32 @@ void main() {
       expect(blocks.length, equals(1));
       expect(blocks.single['type'], equals('streamInfo'));
     });
+
+    test('audio MD5 and STREAMINFO survive blocks remove of the PICTURE',
+        () async {
+      final flacPath = await sirenWithArt();
+
+      final beforeInspect = await runMetaflac(['inspect', '--json', flacPath]);
+      final before =
+          jsonDecode(beforeInspect.stdout as String) as Map<String, dynamic>;
+      final beforeSi = before['streamInfo'] as Map<String, dynamic>;
+
+      final r = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-type=PICTURE',
+        flacPath,
+      ]);
+      expect(r.exitCode, equals(0),
+          reason: 'blocks remove failed: ${r.stderr}');
+
+      final afterInspect = await runMetaflac(['inspect', '--json', flacPath]);
+      expect(afterInspect.exitCode, 0);
+      final after =
+          jsonDecode(afterInspect.stdout as String) as Map<String, dynamic>;
+      final afterSi = after['streamInfo'] as Map<String, dynamic>;
+      expect(afterSi, equals(beforeSi),
+          reason: 'STREAMINFO (incl. MD5) must be unchanged by metadata edits');
+    });
   });
 }
