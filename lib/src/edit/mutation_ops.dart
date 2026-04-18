@@ -1,3 +1,6 @@
+import 'dart:typed_data';
+
+import '../model/flac_block_type.dart';
 import '../model/picture_block.dart';
 import '../model/picture_type.dart';
 
@@ -195,4 +198,73 @@ final class SetPadding extends MetadataMutation {
   /// The desired padding size in bytes. A value of zero removes all
   /// padding.
   final int size;
+}
+
+/// Remove every metadata block whose [FlacBlockType] is in [types].
+///
+/// STREAMINFO (type 0) is mandatory per the FLAC specification. Including
+/// [FlacBlockType.streamInfo] in [types] is a programmer error: the editor
+/// throws [FlacMetadataException] at build time.
+///
+/// Unknown types (type code outside 0–6) may be targeted by including
+/// [FlacBlockType.unknown], which removes all blocks that the parser could
+/// not classify.
+final class RemoveBlocksByType extends MetadataMutation {
+  /// Create a mutation that removes blocks whose type is in [types].
+  const RemoveBlocksByType(this.types);
+
+  /// The set of block types to remove.
+  final Set<FlacBlockType> types;
+}
+
+/// Remove metadata blocks at the given 0-based [indices].
+///
+/// Index 0 always refers to STREAMINFO which cannot be removed; if 0 is
+/// present in [indices] it is silently skipped. Indices outside the range
+/// of existing blocks are ignored.
+final class RemoveBlocksByNumber extends MetadataMutation {
+  /// Create a mutation that removes blocks at [indices].
+  const RemoveBlocksByNumber(this.indices);
+
+  /// The set of 0-based block indices to remove.
+  final Set<int> indices;
+}
+
+/// Remove every metadata block except STREAMINFO.
+///
+/// Convenience for the upstream `metaflac --remove-all` flag.
+final class RemoveAllNonStreamInfo extends MetadataMutation {
+  /// Create a mutation that strips all non-STREAMINFO blocks.
+  const RemoveAllNonStreamInfo();
+}
+
+/// Append a pre-serialised metadata block to the document.
+///
+/// The [payload] bytes are written verbatim with a block header carrying
+/// [type]'s numeric code. The block is carried internally as an
+/// `UnknownBlock` so no payload validation is performed; callers are
+/// responsible for supplying well-formed bytes.
+///
+/// Position:
+/// - [afterIndex] `null` — append at the tail, before any trailing
+///   `PaddingBlock`.
+/// - [afterIndex] `0` — insert immediately after STREAMINFO.
+/// - [afterIndex] `n > 0` — insert after the block currently at index `n`.
+///   If `n >= blocks.length`, append at the tail.
+final class AppendRawBlock extends MetadataMutation {
+  /// Create a mutation that appends a raw block.
+  const AppendRawBlock({
+    required this.type,
+    required this.payload,
+    this.afterIndex,
+  });
+
+  /// The block type code that the serialiser should write.
+  final FlacBlockType type;
+
+  /// The pre-serialised block payload (excluding the 4-byte block header).
+  final Uint8List payload;
+
+  /// Where to insert the block. See class docs for semantics.
+  final int? afterIndex;
 }

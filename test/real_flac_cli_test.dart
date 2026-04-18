@@ -542,4 +542,129 @@ void main() {
       expect(output, contains('48000'));
     });
   });
+
+  // ─── Group 6: Tier 3 on real FLAC with an embedded picture ──────────────
+
+  group('Tier 3 block management on real FLAC', () {
+    // A minimal but real JPEG (SOI + APP0 JFIF header + EOI).
+    // Large enough to be a plausible picture payload; small enough to
+    // keep the round-trip fast.
+    final tinyJpeg = Uint8List.fromList([
+      0xFF, 0xD8, // SOI
+      0xFF, 0xE0, 0x00, 0x10, // APP0 marker, length 16
+      0x4A, 0x46, 0x49, 0x46, 0x00, // JFIF\0
+      0x01, 0x01, // version
+      0x00, // units
+      0x00, 0x01, 0x00, 0x01, // xDensity, yDensity
+      0x00, 0x00, // thumbnail w/h
+      0xFF, 0xD9, // EOI
+    ]);
+
+    /// Copies siren.flac and embeds a PICTURE block via `picture add`.
+    /// Returns the path to the resulting FLAC. Verifies the picture is
+    /// present before handing back so downstream tests can focus on the
+    /// removal assertion.
+    Future<String> sirenWithArt() async {
+      final flacPath = copySiren(name: 'siren_with_art.flac');
+      final imgPath = '${tmpDir.path}/cover.jpg';
+      File(imgPath).writeAsBytesSync(tinyJpeg);
+
+      final add = await runMetaflac([
+        'picture',
+        'add',
+        '--file=$imgPath',
+        '--type=front-cover',
+        flacPath,
+      ]);
+      expect(add.exitCode, equals(0),
+          reason: 'picture add failed: ${add.stderr}');
+
+      // Sanity check: the PICTURE block is actually there now.
+      final list = await runMetaflac(['blocks', 'list', '--json', flacPath]);
+      final json = jsonDecode(list.stdout as String) as Map<String, dynamic>;
+      final types =
+          (json['blocks'] as List).map((b) => b['type'] as String).toList();
+      expect(types, contains('picture'),
+          reason: 'setup should have produced a PICTURE block');
+      return flacPath;
+    }
+
+    test('blocks remove --block-type=PICTURE strips embedded art', () async {
+      final flacPath = await sirenWithArt();
+
+      final r = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-type=PICTURE',
+        flacPath,
+      ]);
+      expect(r.exitCode, equals(0),
+          reason: 'blocks remove failed: ${r.stderr}');
+
+      final list = await runMetaflac(['blocks', 'list', '--json', flacPath]);
+      final json = jsonDecode(list.stdout as String) as Map<String, dynamic>;
+      final types =
+          (json['blocks'] as List).map((b) => b['type'] as String).toList();
+      expect(types, isNot(contains('picture')));
+      // STREAMINFO must still be there.
+      expect(types, contains('streamInfo'));
+    });
+
+    test('legacy --remove --block-type=PICTURE strips embedded art', () async {
+      final flacPath = await sirenWithArt();
+
+      final r = await runMetaflac([
+        '--remove',
+        '--block-type=PICTURE',
+        flacPath,
+      ]);
+      expect(r.exitCode, equals(0), reason: '--remove failed: ${r.stderr}');
+
+      final list = await runMetaflac(['blocks', 'list', '--json', flacPath]);
+      final json = jsonDecode(list.stdout as String) as Map<String, dynamic>;
+      final types =
+          (json['blocks'] as List).map((b) => b['type'] as String).toList();
+      expect(types, isNot(contains('picture')));
+    });
+
+    test('--remove-all strips everything but STREAMINFO', () async {
+      final flacPath = await sirenWithArt();
+
+      final r = await runMetaflac(['--remove-all', flacPath]);
+      expect(r.exitCode, equals(0), reason: '--remove-all failed: ${r.stderr}');
+
+      final list = await runMetaflac(['blocks', 'list', '--json', flacPath]);
+      final json = jsonDecode(list.stdout as String) as Map<String, dynamic>;
+      final blocks = json['blocks'] as List;
+      expect(blocks.length, equals(1));
+      expect(blocks.single['type'], equals('streamInfo'));
+    });
+
+    test('audio MD5 and STREAMINFO survive blocks remove of the PICTURE',
+        () async {
+      final flacPath = await sirenWithArt();
+
+      final beforeInspect = await runMetaflac(['inspect', '--json', flacPath]);
+      final before =
+          jsonDecode(beforeInspect.stdout as String) as Map<String, dynamic>;
+      final beforeSi = before['streamInfo'] as Map<String, dynamic>;
+
+      final r = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-type=PICTURE',
+        flacPath,
+      ]);
+      expect(r.exitCode, equals(0),
+          reason: 'blocks remove failed: ${r.stderr}');
+
+      final afterInspect = await runMetaflac(['inspect', '--json', flacPath]);
+      expect(afterInspect.exitCode, 0);
+      final after =
+          jsonDecode(afterInspect.stdout as String) as Map<String, dynamic>;
+      final afterSi = after['streamInfo'] as Map<String, dynamic>;
+      expect(afterSi, equals(beforeSi),
+          reason: 'STREAMINFO (incl. MD5) must be unchanged by metadata edits');
+    });
+  });
 }

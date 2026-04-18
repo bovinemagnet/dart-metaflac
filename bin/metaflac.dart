@@ -4,6 +4,7 @@ import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:dart_metaflac/dart_metaflac.dart';
 import 'package:dart_metaflac/io.dart';
+import 'package:dart_metaflac/src/cli/block_selection.dart';
 import 'package:dart_metaflac/src/cli/command_runner.dart';
 
 // ─── Exit codes ───────────────────────────────────────────────────────────────
@@ -66,6 +67,21 @@ Future<void> main(List<String> args) async {
         help: 'Set a tag where VALUE is read from a file (KEY=FILE)')
     ..addOption('import-tags-from', help: 'Import tags from file')
     ..addOption('import-picture-from', help: 'Import picture from file')
+    // ── Tier 3: block management ────────────────────────────────────────
+    ..addFlag('remove',
+        help: 'Remove blocks matching --block-type/--except-block-type/'
+            '--block-number',
+        negatable: false)
+    ..addFlag('remove-all',
+        help: 'Remove all metadata blocks except STREAMINFO', negatable: false)
+    ..addOption('append',
+        help: 'Append a raw metadata block from FILE (use with --block-type)',
+        valueHelp: 'FILE')
+    ..addOption('block-type',
+        help: 'Block types (comma-separated), e.g. PICTURE,PADDING')
+    ..addOption('except-block-type',
+        help: 'Block types to keep (comma-separated)')
+    ..addOption('block-number', help: '0-based block indices (comma-separated)')
     // ── Global options ──────────────────────────────────────────────────
     ..addOption('output-name',
         abbr: 'o',
@@ -169,12 +185,51 @@ Future<int> _processFile({
     final bytes = file.readAsBytesSync();
     final doc = FlacParser.parseBytes(bytes);
 
+    // Tier 3 block-selection options (used by both --list and --remove).
+    final removeFlag = results['remove'] as bool;
+    final removeAll = results['remove-all'] as bool;
+    final appendPath = results['append'] as String?;
+    final blockTypeOpt = results['block-type'] as String?;
+    final exceptBlockTypeOpt = results['except-block-type'] as String?;
+    final blockNumberOpt = results['block-number'] as String?;
+
     // ── Read operations ─────────────────────────────────────────────────
 
     if (results['list'] as bool) {
+      Set<FlacBlockType>? showTypes;
+      Set<FlacBlockType>? hideTypes;
+      Set<int>? showIndices;
+      try {
+        if (blockTypeOpt != null) showTypes = parseBlockTypes(blockTypeOpt);
+        if (exceptBlockTypeOpt != null) {
+          hideTypes = parseBlockTypes(exceptBlockTypeOpt);
+        }
+        if (blockNumberOpt != null) {
+          showIndices = parseBlockNumbers(blockNumberOpt);
+        }
+      } on ArgumentError catch (e) {
+        stderr.writeln('Error: ${e.message}');
+        return _exitInvalidArgs;
+      }
+
+      final hasFilter =
+          showTypes != null || hideTypes != null || showIndices != null;
+
       if (useJson) {
         final json = _metadataToJson(doc, filePath);
         _write(jsonEncode(json), quiet);
+      } else if (hasFilter) {
+        for (var i = 0; i < doc.blocks.length; i++) {
+          final b = doc.blocks[i];
+          if (showTypes != null && !showTypes.contains(b.type)) continue;
+          if (hideTypes != null && hideTypes.contains(b.type)) continue;
+          if (showIndices != null && !showIndices.contains(i)) continue;
+          _write(
+            '${prefix}BLOCK $i: type=${b.type.name} '
+            '(${b.type.code}), size=${b.payloadLength}',
+            quiet,
+          );
+        }
       } else {
         if (!quiet) _printMetadata(doc, prefix);
       }
@@ -339,7 +394,10 @@ Future<int> _processFile({
         setTags.isNotEmpty ||
         setTagFromFile.isNotEmpty ||
         importTagsFrom != null ||
-        importPictureFrom != null;
+        importPictureFrom != null ||
+        removeFlag ||
+        removeAll ||
+        appendPath != null;
 
     if (!hasWriteOp) {
       stderr.writeln('No operation specified. Use --help for usage.');
@@ -432,6 +490,71 @@ Future<int> _processFile({
         indexedColors: 0,
         data: picFile.readAsBytesSync(),
       )));
+    }
+
+    // Tier 3 block operations.
+    if (removeAll) {
+      mutations.add(const RemoveAllNonStreamInfo());
+    } else if (removeFlag) {
+      if (blockTypeOpt == null &&
+          exceptBlockTypeOpt == null &&
+          blockNumberOpt == null) {
+        stderr.writeln('--remove requires --block-type, '
+            '--except-block-type, or --block-number');
+        return _exitInvalidArgs;
+      }
+      if (blockTypeOpt != null && exceptBlockTypeOpt != null) {
+        stderr.writeln('Cannot combine --block-type and --except-block-type');
+        return _exitInvalidArgs;
+      }
+      try {
+        if (blockTypeOpt != null) {
+          mutations.add(RemoveBlocksByType(parseBlockTypes(blockTypeOpt)));
+        } else if (exceptBlockTypeOpt != null) {
+          final keep = parseBlockTypes(exceptBlockTypeOpt);
+          final toRemove = <FlacBlockType>{};
+          for (final b in doc.blocks) {
+            if (b.type == FlacBlockType.streamInfo) continue;
+            if (!keep.contains(b.type)) toRemove.add(b.type);
+          }
+          mutations.add(RemoveBlocksByType(toRemove));
+        }
+        if (blockNumberOpt != null) {
+          mutations
+              .add(RemoveBlocksByNumber(parseBlockNumbers(blockNumberOpt)));
+        }
+      } on ArgumentError catch (e) {
+        stderr.writeln('Error: ${e.message}');
+        return _exitInvalidArgs;
+      }
+    }
+
+    if (appendPath != null) {
+      if (blockTypeOpt == null) {
+        stderr.writeln('--append requires --block-type');
+        return _exitInvalidArgs;
+      }
+      final Set<FlacBlockType> types;
+      try {
+        types = parseBlockTypes(blockTypeOpt);
+      } on ArgumentError catch (e) {
+        stderr.writeln('Error: ${e.message}');
+        return _exitInvalidArgs;
+      }
+      if (types.length != 1) {
+        stderr.writeln('--block-type must name exactly one type for --append');
+        return _exitInvalidArgs;
+      }
+      final blockFile = File(appendPath);
+      if (!blockFile.existsSync()) {
+        _reportError(appendPath, 'Block file not found: $appendPath',
+            'FileSystemException', useJson);
+        return _exitIoError;
+      }
+      mutations.add(AppendRawBlock(
+        type: types.single,
+        payload: blockFile.readAsBytesSync(),
+      ));
     }
 
     if (dryRun) {

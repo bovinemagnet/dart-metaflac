@@ -1,9 +1,14 @@
+import 'dart:typed_data';
+
+import '../error/exceptions.dart';
+import '../model/flac_block_type.dart';
 import '../model/flac_metadata_block.dart';
 import '../model/flac_metadata_document.dart';
 import '../model/padding_block.dart';
 import '../model/picture_block.dart';
 import '../model/picture_type.dart';
 import '../model/stream_info_block.dart';
+import '../model/unknown_block.dart';
 import '../model/vorbis_comment_block.dart';
 import '../model/vorbis_comments.dart';
 import 'mutation_ops.dart';
@@ -90,6 +95,39 @@ class FlacMetadataEditor {
   /// if [size] is zero).
   void setPadding(int size) => _mutations.add(SetPadding(size));
 
+  /// Remove all blocks whose type is in [types].
+  ///
+  /// Enqueues a [RemoveBlocksByType] mutation. STREAMINFO cannot be
+  /// removed — passing [FlacBlockType.streamInfo] causes
+  /// [FlacMetadataException] at [build] time.
+  void removeBlocksByType(Set<FlacBlockType> types) =>
+      _mutations.add(RemoveBlocksByType(types));
+
+  /// Remove blocks at the given 0-based [indices].
+  ///
+  /// Enqueues a [RemoveBlocksByNumber] mutation. Index 0 (STREAMINFO) is
+  /// silently skipped; out-of-range indices are ignored.
+  void removeBlocksByNumber(Set<int> indices) =>
+      _mutations.add(RemoveBlocksByNumber(indices));
+
+  /// Remove every block except STREAMINFO.
+  ///
+  /// Enqueues a [RemoveAllNonStreamInfo] mutation.
+  void removeAllNonStreamInfo() =>
+      _mutations.add(const RemoveAllNonStreamInfo());
+
+  /// Append a pre-serialised block with the given [type] and [payload].
+  ///
+  /// Enqueues an [AppendRawBlock] mutation. See [AppendRawBlock] for
+  /// positioning rules.
+  void appendRawBlock(FlacBlockType type, Uint8List payload,
+          {int? afterIndex}) =>
+      _mutations.add(AppendRawBlock(
+        type: type,
+        payload: payload,
+        afterIndex: afterIndex,
+      ));
+
   /// Apply a single [MetadataMutation] immediately.
   void applyMutation(MetadataMutation mutation) => _mutations.add(mutation);
 
@@ -150,6 +188,47 @@ class FlacMetadataEditor {
         final withoutPadding = blocks.where((b) => b is! PaddingBlock).toList();
         if (m.size > 0) return [...withoutPadding, PaddingBlock(m.size)];
         return withoutPadding;
+      case RemoveBlocksByType m:
+        if (m.types.contains(FlacBlockType.streamInfo)) {
+          throw FlacMetadataException(
+            'Cannot remove STREAMINFO block — it is mandatory per the '
+            'FLAC specification.',
+          );
+        }
+        if (m.types.isEmpty) return blocks;
+        return blocks.where((b) => !m.types.contains(b.type)).toList();
+      case RemoveBlocksByNumber m:
+        final toKeep = <FlacMetadataBlock>[];
+        for (var i = 0; i < blocks.length; i++) {
+          if (i == 0 || !m.indices.contains(i)) {
+            toKeep.add(blocks[i]);
+          }
+        }
+        return toKeep;
+      case RemoveAllNonStreamInfo _:
+        return blocks.whereType<StreamInfoBlock>().toList();
+      case AppendRawBlock m:
+        final raw = UnknownBlock(
+          rawTypeCode: m.type.code,
+          rawPayload: Uint8List.fromList(m.payload),
+        );
+        if (m.afterIndex != null) {
+          final idx = m.afterIndex!;
+          if (idx >= blocks.length - 1) return [...blocks, raw];
+          return [
+            ...blocks.sublist(0, idx + 1),
+            raw,
+            ...blocks.sublist(idx + 1),
+          ];
+        }
+        if (blocks.isNotEmpty && blocks.last is PaddingBlock) {
+          return [
+            ...blocks.sublist(0, blocks.length - 1),
+            raw,
+            blocks.last,
+          ];
+        }
+        return [...blocks, raw];
     }
   }
 

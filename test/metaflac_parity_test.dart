@@ -14,6 +14,7 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:dart_metaflac/dart_metaflac.dart';
 import 'package:test/test.dart';
@@ -451,6 +452,77 @@ void main() {
       expect(show.exitCode, 0);
       expect(
           show.stdout.toString().trim(), contains('ARTIST=Long Form Artist'));
+    });
+  });
+
+  group('Tier 3: block management legacy flags', () {
+    String buildFixtureWithPicture() {
+      final bytes = buildFlac(
+        sampleRate: 48000,
+        channels: 2,
+        bitsPerSample: 16,
+        totalSamples: 88200,
+        paddingSize: 256,
+        vorbisComment: _vc([('TITLE', 'T')]),
+        pictures: [
+          PictureBlock(
+            pictureType: PictureType.frontCover,
+            mimeType: 'image/jpeg',
+            description: '',
+            width: 0,
+            height: 0,
+            colorDepth: 0,
+            indexedColors: 0,
+            data: Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE0]),
+          ),
+        ],
+      );
+      final path = tmpFile('tier3.flac');
+      File(path).writeAsBytesSync(bytes);
+      return path;
+    }
+
+    test('--remove --block-type=PICTURE strips pictures', () async {
+      final path = buildFixtureWithPicture();
+      final r = await runCli(['--remove', '--block-type=PICTURE', path]);
+      expect(r.exitCode, 0);
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
+      expect(doc.pictures, isEmpty);
+    });
+
+    test('--remove-all leaves only STREAMINFO', () async {
+      final path = buildFixtureWithPicture();
+      final r = await runCli(['--remove-all', path]);
+      expect(r.exitCode, 0);
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
+      expect(doc.blocks.length, 1);
+      expect(doc.blocks.single, isA<StreamInfoBlock>());
+    });
+
+    test('--append inserts a raw block', () async {
+      final path = buildFixtureWithPicture();
+      final blockPath = tmpFile('raw.bin');
+      File(blockPath).writeAsBytesSync([0x58, 0x59, 0x5A, 0x5B, 0x00]);
+      final r = await runCli([
+        '--append=$blockPath',
+        '--block-type=APPLICATION',
+        path,
+      ]);
+      expect(r.exitCode, 0);
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
+      expect(doc.blocks.whereType<ApplicationBlock>(), isNotEmpty);
+    });
+
+    test('--list --block-type=PICTURE filters output', () async {
+      final path = buildFixtureWithPicture();
+      final r = await runCli(['--list', '--block-type=PICTURE', path]);
+      expect(r.exitCode, 0);
+      final out = r.stdout.toString();
+      expect(out, contains('picture'));
+      expect(out, isNot(contains('streamInfo')));
     });
   });
 }
