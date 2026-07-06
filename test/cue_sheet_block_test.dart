@@ -72,5 +72,22 @@ void main() {
         equals(['AAAA0000000A', 'BBBB0000000B', 'CCCC0000000C']),
       );
     });
+
+    test('rawPayload does not alias the source buffer', () {
+      final payload = buildCueSheetPayload([(1000, 1, 'AAAA0000000A', 1)]);
+      final source = buildFlacWithCueSheet(payload);
+      final doc = FlacMetadataDocument.readFromBytes(source);
+      final cue = doc.blocks.whereType<CueSheetBlock>().single;
+
+      final originalSource = Uint8List.fromList(source);
+      cue.rawPayload[0] = 0xEE;
+      expect(source, equals(originalSource),
+          reason: 'mutating rawPayload must not corrupt the source bytes');
+
+      final originalFirstByte = cue.rawPayload[1];
+      source[source.length - 1] = 0x77;
+      // Mutating the source after parse must not affect the parsed block.
+      expect(cue.rawPayload[1], equals(originalFirstByte));
+    });
   });
 }

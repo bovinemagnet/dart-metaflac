@@ -86,7 +86,7 @@ class FlacParser {
       }
 
       final payloadStart = reader.offset;
-      final block = _parseBlock(header, reader, bytes);
+      final block = _parseBlock(header, reader);
       blocks.add(block);
 
       // Ensure reader consumed exactly payloadLength bytes.
@@ -124,7 +124,6 @@ class FlacParser {
   static FlacMetadataBlock _parseBlock(
     FlacBlockHeader header,
     ByteReader reader,
-    Uint8List source,
   ) {
     switch (header.typeCode) {
       case 0:
@@ -138,7 +137,7 @@ class FlacParser {
       case 4:
         return _parseVorbisComment(reader, header.payloadLength);
       case 5:
-        return _parseCueSheet(reader, header.payloadLength, source);
+        return _parseCueSheet(reader, header.payloadLength);
       case 6:
         return _parsePicture(reader, header.payloadLength);
       default:
@@ -260,13 +259,10 @@ class FlacParser {
     );
   }
 
-  static CueSheetBlock _parseCueSheet(
-      ByteReader reader, int payloadLength, Uint8List source) {
-    // Capture raw bytes for round-trip fidelity.
-    final startOffset = reader.offset;
-    final rawPayload =
-        Uint8List.sublistView(source, startOffset, startOffset + payloadLength);
-    reader.skip(payloadLength);
+  static CueSheetBlock _parseCueSheet(ByteReader reader, int payloadLength) {
+    // Capture raw bytes (copied, like every other block) for round-trip
+    // fidelity.
+    final rawPayload = reader.readBytes(payloadLength);
 
     // Minimal parse for the public model fields.
     final rawReader = ByteReader(rawPayload);
