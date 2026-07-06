@@ -1,9 +1,14 @@
 import 'dart:typed_data';
 
+import '../error/exceptions.dart';
 import '../model/flac_metadata_block.dart';
 import '../model/unknown_block.dart';
 import 'byte_writer.dart';
 import 'flac_constants.dart';
+
+/// The largest payload a metadata block header can describe: the length
+/// field is 24 bits wide (see RFC 9639 §8.1).
+const int _maxBlockPayloadLength = 0xFFFFFF;
 
 /// Serialiser that writes [FlacMetadataBlock] lists back to FLAC binary format.
 ///
@@ -51,6 +56,12 @@ class FlacSerializer {
       final block = blocks[i];
       final isLast = i == blocks.length - 1;
       final payload = block.toPayloadBytes();
+      if (payload.length > _maxBlockPayloadLength) {
+        throw MalformedMetadataException(
+          'Metadata block payload is ${payload.length} bytes, which exceeds '
+          'the 24-bit block length limit of $_maxBlockPayloadLength bytes.',
+        );
+      }
       final rawCode =
           block is UnknownBlock ? block.rawTypeCode : block.type.code;
       final typeByte = rawCode & 0x7F;

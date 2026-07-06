@@ -185,24 +185,43 @@ class BlocksRemoveCommand extends BaseFlacCommand {
         }
 
         final mutations = <MetadataMutation>[];
+        final hasTypeFilter = blockType != null || exceptBlockType != null;
 
-        if (blockType != null) {
-          final types = parseBlockTypes(blockType);
-          mutations.add(RemoveBlocksByType(types));
+        if (blockNumber != null && hasTypeFilter) {
+          // metaflac ANDs --block-number with --[except-]block-type: a block
+          // is removed only if it matches BOTH selectors. Compute the set in
+          // a single pass over the ORIGINAL layout so index-based selection
+          // is not skewed by type-based removals.
+          final numbers = parseBlockNumbers(blockNumber);
+          final removeTypes =
+              blockType != null ? parseBlockTypes(blockType) : null;
+          final keepTypes =
+              exceptBlockType != null ? parseBlockTypes(exceptBlockType) : null;
+          final doc = FlacParser.parseBytes(file.readAsBytesSync());
+          final removeIndices = <int>{};
+          for (var i = 0; i < doc.blocks.length; i++) {
+            if (i == 0) continue; // STREAMINFO is never removed
+            if (!numbers.contains(i)) continue;
+            final t = doc.blocks[i].type;
+            final typeMatches = removeTypes != null
+                ? removeTypes.contains(t)
+                : !keepTypes!.contains(t);
+            if (typeMatches) removeIndices.add(i);
+          }
+          mutations.add(RemoveBlocksByNumber(removeIndices));
+        } else if (blockType != null) {
+          mutations.add(RemoveBlocksByType(parseBlockTypes(blockType)));
         } else if (exceptBlockType != null) {
           final keep = parseBlockTypes(exceptBlockType);
-          final bytes = file.readAsBytesSync();
-          final doc = FlacParser.parseBytes(bytes);
+          final doc = FlacParser.parseBytes(file.readAsBytesSync());
           final toRemove = <FlacBlockType>{};
           for (final b in doc.blocks) {
             if (b.type == FlacBlockType.streamInfo) continue;
             if (!keep.contains(b.type)) toRemove.add(b.type);
           }
           mutations.add(RemoveBlocksByType(toRemove));
-        }
-
-        if (blockNumber != null) {
-          mutations.add(RemoveBlocksByNumber(parseBlockNumbers(blockNumber)));
+        } else {
+          mutations.add(RemoveBlocksByNumber(parseBlockNumbers(blockNumber!)));
         }
 
         if (dryRun) {

@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import '../api/transform_api.dart';
 import '../edit/mutation_ops.dart';
 import '../error/exceptions.dart';
@@ -115,7 +114,10 @@ class FlacFileEditor {
         await AtomicWriter.writeToNew(targetPath, result.bytes);
       case WriteMode.inPlaceIfPossible:
         if (result.plan.fitsExistingRegion) {
-          await _writeInPlace(path, result.bytes, inputBytes.length);
+          // The write itself is always atomic (temp file + rename) so an
+          // interrupted write can never destroy the original file; "in
+          // place" only means the metadata region was not relocated.
+          await AtomicWriter.writeAtomic(path, result.bytes);
         } else {
           throw WriteConflictException(
             'Metadata does not fit existing region. '
@@ -123,35 +125,12 @@ class FlacFileEditor {
           );
         }
       case WriteMode.auto:
-        if (result.plan.fitsExistingRegion) {
-          await _writeInPlace(path, result.bytes, inputBytes.length);
-        } else {
-          await AtomicWriter.writeAtomic(targetPath, result.bytes);
-        }
+        await AtomicWriter.writeAtomic(targetPath, result.bytes);
     }
 
     // 4. Restore modtime if requested.
     if (options.preserveModTime && originalModTime != null) {
       await ModTimePreserver.restore(targetPath, originalModTime);
-    }
-  }
-
-  /// Write bytes in-place when the new content fits the existing file size.
-  static Future<void> _writeInPlace(
-    String path,
-    Uint8List newBytes,
-    int originalLength,
-  ) async {
-    final raf = await File(path).open(mode: FileMode.writeOnly);
-    try {
-      await raf.writeFrom(newBytes);
-      // If new file is shorter, truncate.
-      if (newBytes.length < originalLength) {
-        await raf.truncate(newBytes.length);
-      }
-      await raf.flush();
-    } finally {
-      await raf.close();
     }
   }
 }

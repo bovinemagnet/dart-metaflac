@@ -508,7 +508,31 @@ Future<int> _processFile({
         return _exitInvalidArgs;
       }
       try {
-        if (blockTypeOpt != null) {
+        final hasTypeFilter =
+            blockTypeOpt != null || exceptBlockTypeOpt != null;
+        if (blockNumberOpt != null && hasTypeFilter) {
+          // metaflac ANDs --block-number with --[except-]block-type: remove a
+          // block only if it matches BOTH selectors. Compute the set in a
+          // single pass over the original layout so index-based selection is
+          // not skewed by type-based removals.
+          final numbers = parseBlockNumbers(blockNumberOpt);
+          final removeTypes =
+              blockTypeOpt != null ? parseBlockTypes(blockTypeOpt) : null;
+          final keepTypes = exceptBlockTypeOpt != null
+              ? parseBlockTypes(exceptBlockTypeOpt)
+              : null;
+          final removeIndices = <int>{};
+          for (var i = 0; i < doc.blocks.length; i++) {
+            if (i == 0) continue; // STREAMINFO is never removed
+            if (!numbers.contains(i)) continue;
+            final t = doc.blocks[i].type;
+            final typeMatches = removeTypes != null
+                ? removeTypes.contains(t)
+                : !keepTypes!.contains(t);
+            if (typeMatches) removeIndices.add(i);
+          }
+          mutations.add(RemoveBlocksByNumber(removeIndices));
+        } else if (blockTypeOpt != null) {
           mutations.add(RemoveBlocksByType(parseBlockTypes(blockTypeOpt)));
         } else if (exceptBlockTypeOpt != null) {
           final keep = parseBlockTypes(exceptBlockTypeOpt);
@@ -518,10 +542,9 @@ Future<int> _processFile({
             if (!keep.contains(b.type)) toRemove.add(b.type);
           }
           mutations.add(RemoveBlocksByType(toRemove));
-        }
-        if (blockNumberOpt != null) {
+        } else {
           mutations
-              .add(RemoveBlocksByNumber(parseBlockNumbers(blockNumberOpt)));
+              .add(RemoveBlocksByNumber(parseBlockNumbers(blockNumberOpt!)));
         }
       } on ArgumentError catch (e) {
         stderr.writeln('Error: ${e.message}');

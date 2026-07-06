@@ -947,24 +947,47 @@ void main() {
       expect(doc.blocks[1], isA<ApplicationBlock>());
     });
 
-    // ── Union: --block-type + --block-number ───────────────────────────
-    test('blocks remove with both --block-type and --block-number unions',
-        () async {
-      writeFlac('union.flac', flacFixture());
+    // ── Intersection: --block-type + --block-number (metaflac AND) ─────
+    test(
+        'blocks remove with both --block-type and --block-number removes only '
+        'the block matching both (AND semantics)', () async {
+      writeFlac('and.flac', flacFixture());
       // Layout: 0=STREAMINFO 1=VORBIS_COMMENT 2=PICTURE 3=PADDING.
-      // Removing type=PICTURE + number=1 should strip both VC and PICTURE.
+      // type=PICTURE AND number=2 matches exactly the PICTURE; VC and
+      // PADDING must survive (real metaflac ANDs the two selectors).
+      final r = await runMetaflac([
+        'blocks',
+        'remove',
+        '--block-type=PICTURE',
+        '--block-number=2',
+        tmpFile('and.flac'),
+      ]);
+      expect(r.exitCode, 0);
+      final doc = FlacMetadataDocument.readFromBytes(
+          File(tmpFile('and.flac')).readAsBytesSync());
+      expect(doc.pictures, isEmpty, reason: 'PICTURE at index 2 removed');
+      expect(doc.vorbisComment, isNotNull, reason: 'VORBIS_COMMENT kept');
+      expect(doc.blocks.whereType<PaddingBlock>(), isNotEmpty,
+          reason: 'PADDING kept — it was never targeted');
+    });
+
+    test(
+        'blocks remove with a non-intersecting --block-type/--block-number '
+        'removes nothing', () async {
+      writeFlac('noand.flac', flacFixture());
+      // number=1 is the VORBIS_COMMENT, not a PICTURE, so the AND is empty.
       final r = await runMetaflac([
         'blocks',
         'remove',
         '--block-type=PICTURE',
         '--block-number=1',
-        tmpFile('union.flac'),
+        tmpFile('noand.flac'),
       ]);
       expect(r.exitCode, 0);
       final doc = FlacMetadataDocument.readFromBytes(
-          File(tmpFile('union.flac')).readAsBytesSync());
-      expect(doc.pictures, isEmpty);
-      expect(doc.vorbisComment, isNull);
+          File(tmpFile('noand.flac')).readAsBytesSync());
+      expect(doc.pictures, isNotEmpty);
+      expect(doc.vorbisComment, isNotNull);
     });
 
     // ── Invalid block-type name ────────────────────────────────────────

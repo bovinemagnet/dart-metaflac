@@ -128,6 +128,47 @@ void main() {
       expect(tags, isEmpty);
     });
 
+    test('inPlaceIfPossible does not overwrite the original file in place',
+        () async {
+      // A hard link lets us observe the original inode. A crash-safe write
+      // replaces the file via rename (new inode), leaving the link — and
+      // therefore the original data blocks — untouched. Truncating the
+      // target in place would destroy the original on any mid-write failure.
+      final bytes = buildFlac(
+        vorbisComment: _makeVorbisBlock({
+          'ARTIST': ['A long artist name to take up space'],
+          'ALBUM': ['A long album name to take up space'],
+        }),
+        paddingSize: 2048,
+      );
+      final path = '${tempDir.path}/test.flac';
+      File(path).writeAsBytesSync(bytes);
+
+      final linkPath = '${tempDir.path}/hardlink.flac';
+      final ln = Process.runSync('ln', [path, linkPath]);
+      if (ln.exitCode != 0) {
+        markTestSkipped('hard links unavailable on this platform');
+        return;
+      }
+
+      await FlacFileEditor.updateFile(
+        path,
+        mutations: [const ClearTags()],
+        options: const FlacWriteOptions(
+          writeMode: WriteMode.inPlaceIfPossible,
+        ),
+      );
+
+      // The primary path reflects the edit.
+      final updated = FlacParser.parseBytes(File(path).readAsBytesSync());
+      expect(updated.vorbisComment?.comments.entries ?? [], isEmpty);
+
+      // The original inode (via the hard link) is untouched.
+      final original = FlacParser.parseBytes(File(linkPath).readAsBytesSync());
+      expect(original.vorbisComment?.comments.valuesOf('ARTIST'),
+          equals(['A long artist name to take up space']));
+    });
+
     test('inPlaceIfPossible throws when metadata grows', () async {
       // Build with no padding and minimal vorbis, then add a large tag.
       final bytes = buildFlac(paddingSize: -1);
