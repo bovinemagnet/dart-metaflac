@@ -6,8 +6,10 @@ import 'test_fixtures.dart';
 
 void main() {
   group('serialiser 24-bit length limit', () {
-    test('throws instead of silently truncating an oversized padding block', () {
-      final doc = FlacMetadataDocument.readFromBytes(buildFlac(paddingSize: -1));
+    test('throws instead of silently truncating an oversized padding block',
+        () {
+      final doc =
+          FlacMetadataDocument.readFromBytes(buildFlac(paddingSize: -1));
       final updated = doc.edit((e) => e.setPadding(0x1000000)); // 16 MiB + 0
       expect(
         () => updated.toBytes(),
@@ -15,8 +17,10 @@ void main() {
       );
     });
 
-    test('throws instead of silently truncating an oversized picture block', () {
-      final doc = FlacMetadataDocument.readFromBytes(buildFlac(paddingSize: -1));
+    test('throws instead of silently truncating an oversized picture block',
+        () {
+      final doc =
+          FlacMetadataDocument.readFromBytes(buildFlac(paddingSize: -1));
       final bigPicture = PictureBlock(
         pictureType: PictureType.frontCover,
         mimeType: 'image/jpeg',
@@ -35,7 +39,8 @@ void main() {
     });
 
     test('a block at exactly the 24-bit maximum still serialises', () {
-      final doc = FlacMetadataDocument.readFromBytes(buildFlac(paddingSize: -1));
+      final doc =
+          FlacMetadataDocument.readFromBytes(buildFlac(paddingSize: -1));
       final updated = doc.edit((e) => e.setPadding(0xFFFFFF)); // max
       expect(updated.toBytes(), isNotEmpty);
     });
