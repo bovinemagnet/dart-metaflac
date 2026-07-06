@@ -270,7 +270,7 @@ class FlacParser {
       final isrc = String.fromCharCodes(isrcBytes.takeWhile((b) => b != 0));
       rawReader.skip(14); // flags + reserved
       final indexCount = rawReader.readUint8();
-      rawReader.skip(3); // reserved
+      // Each index point is 12 bytes: offset(8) + number(1) + reserved(3).
       rawReader.skip(indexCount * 12);
       tracks
           .add(CueSheetTrack(offset: trackOffset, number: number, isrc: isrc));
