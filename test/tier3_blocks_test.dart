@@ -230,6 +230,23 @@ void main() {
       expect(updated.blocks.last, isA<UnknownBlock>());
     });
 
+    test('negative afterIndex throws FlacMetadataException', () {
+      final payload = Uint8List.fromList([9]);
+      final doc = FlacMetadataDocument.readFromBytes(_fixture());
+      // -1 must not insert before STREAMINFO; -2 must not throw RangeError.
+      for (final idx in [-1, -2]) {
+        expect(
+          () => doc.edit((e) => e.appendRawBlock(
+                FlacBlockType.application,
+                payload,
+                afterIndex: idx,
+              )),
+          throwsA(isA<FlacMetadataException>()),
+          reason: 'afterIndex: $idx',
+        );
+      }
+    });
+
     test('bytes round-trip through serialise + reparse', () {
       final payload = Uint8List.fromList([0x11, 0x22, 0x33, 0x44, 0x55]);
       final doc = FlacMetadataDocument.readFromBytes(_fixture());

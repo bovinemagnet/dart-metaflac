@@ -214,6 +214,12 @@ class FlacMetadataEditor {
         );
         if (m.afterIndex != null) {
           final idx = m.afterIndex!;
+          if (idx < 0) {
+            throw FlacMetadataException(
+              'afterIndex must not be negative (got $idx): inserting before '
+              'STREAMINFO would violate the FLAC specification.',
+            );
+          }
           if (idx >= blocks.length - 1) return [...blocks, raw];
           return [
             ...blocks.sublist(0, idx + 1),
