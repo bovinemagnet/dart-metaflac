@@ -491,6 +491,21 @@ void main() {
       expect(doc.pictures, isEmpty);
     });
 
+    test('--remove --block-type + --block-number ANDs the two selectors',
+        () async {
+      final path = buildFixtureWithPicture();
+      // Layout: 0=STREAMINFO 1=VORBIS_COMMENT 2=PICTURE 3=PADDING.
+      // type=PICTURE AND number=2 matches only the PICTURE.
+      final r = await runCli(
+          ['--remove', '--block-type=PICTURE', '--block-number=2', path]);
+      expect(r.exitCode, 0);
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
+      expect(doc.pictures, isEmpty);
+      expect(doc.vorbisComment, isNotNull);
+      expect(doc.blocks.whereType<PaddingBlock>(), isNotEmpty);
+    });
+
     test('--remove-all leaves only STREAMINFO', () async {
       final path = buildFixtureWithPicture();
       final r = await runCli(['--remove-all', path]);
