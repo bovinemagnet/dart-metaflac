@@ -947,6 +947,24 @@ void main() {
       expect(doc.blocks[1], isA<ApplicationBlock>());
     });
 
+    test('blocks append --after=-1 exits 2', () async {
+      writeFlac('negafter.flac', flacFixture());
+      final blockPath = tmpFile('raw-neg.bin');
+      File(blockPath).writeAsBytesSync([0x41, 0x42, 0x43, 0x44, 0x99]);
+      final before = File(tmpFile('negafter.flac')).readAsBytesSync();
+      final r = await runMetaflac([
+        'blocks',
+        'append',
+        '--type=APPLICATION',
+        '--from-file=$blockPath',
+        '--after=-1',
+        tmpFile('negafter.flac'),
+      ]);
+      expect(r.exitCode, equals(2));
+      final after = File(tmpFile('negafter.flac')).readAsBytesSync();
+      expect(after, equals(before), reason: 'file must be untouched');
+    });
+
     // ── Intersection: --block-type + --block-number (metaflac AND) ─────
     test(
         'blocks remove with both --block-type and --block-number removes only '

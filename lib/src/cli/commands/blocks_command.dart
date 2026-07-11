@@ -392,6 +392,10 @@ class BlocksAppendCommand extends BaseFlacCommand {
     if (afterStr != null && afterIndex == null) {
       throw UsageException('--after must be an integer.', usage);
     }
+    if (afterIndex != null && afterIndex < 0) {
+      throw UsageException(
+          '--after must not be negative (STREAMINFO is always first).', usage);
+    }
 
     final blockFile = File(fromFile);
     if (!blockFile.existsSync()) {

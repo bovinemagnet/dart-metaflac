@@ -86,7 +86,7 @@ class FlacParser {
       }
 
       final payloadStart = reader.offset;
-      final block = _parseBlock(header, reader, bytes);
+      final block = _parseBlock(header, reader);
       blocks.add(block);
 
       // Ensure reader consumed exactly payloadLength bytes.
@@ -124,7 +124,6 @@ class FlacParser {
   static FlacMetadataBlock _parseBlock(
     FlacBlockHeader header,
     ByteReader reader,
-    Uint8List source,
   ) {
     switch (header.typeCode) {
       case 0:
@@ -138,7 +137,7 @@ class FlacParser {
       case 4:
         return _parseVorbisComment(reader, header.payloadLength);
       case 5:
-        return _parseCueSheet(reader, header.payloadLength, source);
+        return _parseCueSheet(reader, header.payloadLength);
       case 6:
         return _parsePicture(reader, header.payloadLength);
       default:
@@ -194,6 +193,12 @@ class FlacParser {
 
   static ApplicationBlock _parseApplication(
       ByteReader reader, int payloadLength) {
+    if (payloadLength < 4) {
+      throw MalformedMetadataException(
+        'APPLICATION block payload is $payloadLength bytes; at least 4 '
+        'bytes are required for the application ID.',
+      );
+    }
     final appId = reader.readBytes(4);
     final data = reader.readBytes(payloadLength - 4);
     return ApplicationBlock(applicationId: appId, data: data);
@@ -217,16 +222,30 @@ class FlacParser {
     return SeekTableBlock(points: points);
   }
 
+  /// Decode [bytes] as UTF-8, converting a [FormatException] into the
+  /// parser's documented [MalformedMetadataException].
+  static String _decodeUtf8(List<int> bytes, String what) {
+    try {
+      return utf8.decode(bytes);
+    } on FormatException catch (e) {
+      throw MalformedMetadataException(
+        'Invalid UTF-8 in $what.',
+        cause: e,
+      );
+    }
+  }
+
   static VorbisCommentBlock _parseVorbisComment(
       ByteReader reader, int payloadLength) {
     final vendorLength = reader.readUint32LE();
     final vendorBytes = reader.readBytes(vendorLength);
-    final vendorString = utf8.decode(vendorBytes);
+    final vendorString = _decodeUtf8(vendorBytes, 'Vorbis vendor string');
     final commentCount = reader.readUint32LE();
     final entries = <VorbisCommentEntry>[];
     for (var i = 0; i < commentCount; i++) {
       final len = reader.readUint32LE();
-      final commentStr = utf8.decode(reader.readBytes(len));
+      final commentStr =
+          _decodeUtf8(reader.readBytes(len), 'Vorbis comment entry');
       final eqIdx = commentStr.indexOf('=');
       if (eqIdx >= 0) {
         entries.add(VorbisCommentEntry(
@@ -240,13 +259,10 @@ class FlacParser {
     );
   }
 
-  static CueSheetBlock _parseCueSheet(
-      ByteReader reader, int payloadLength, Uint8List source) {
-    // Capture raw bytes for round-trip fidelity.
-    final startOffset = reader.offset;
-    final rawPayload =
-        Uint8List.sublistView(source, startOffset, startOffset + payloadLength);
-    reader.skip(payloadLength);
+  static CueSheetBlock _parseCueSheet(ByteReader reader, int payloadLength) {
+    // Capture raw bytes (copied, like every other block) for round-trip
+    // fidelity.
+    final rawPayload = reader.readBytes(payloadLength);
 
     // Minimal parse for the public model fields.
     final rawReader = ByteReader(rawPayload);
@@ -288,9 +304,11 @@ class FlacParser {
   static PictureBlock _parsePicture(ByteReader reader, int payloadLength) {
     final typeCode = reader.readUint32BE();
     final mimeLen = reader.readUint32BE();
-    final mimeType = utf8.decode(reader.readBytes(mimeLen));
+    final mimeType =
+        _decodeUtf8(reader.readBytes(mimeLen), 'PICTURE MIME type');
     final descLen = reader.readUint32BE();
-    final description = utf8.decode(reader.readBytes(descLen));
+    final description =
+        _decodeUtf8(reader.readBytes(descLen), 'PICTURE description');
     final width = reader.readUint32BE();
     final height = reader.readUint32BE();
     final colorDepth = reader.readUint32BE();
