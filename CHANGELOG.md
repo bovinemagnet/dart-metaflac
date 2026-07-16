@@ -1,3 +1,15 @@
+## Unreleased
+
+### Library additions
+
+- `FlacMetadataDocument.pictureByType(PictureType)` — look up the first
+  picture of a given type, or `null` if none.
+- `FlacMetadataDocument.frontCoverPicture` and `backCoverPicture` —
+  convenience getters returning the first matching cover picture.
+- `FlacMetadataEditor.setFrontCover(PictureBlock)` and
+  `setBackCover(PictureBlock)` — upsert semantics: remove any existing
+  cover of the same type, then append the new block.
+
 ## 0.0.2
 
 metaflac CLI parity, Tiers 1 and 2 of the parity effort. Additive —
