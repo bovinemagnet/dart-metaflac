@@ -205,8 +205,8 @@ void main() {
     test('setFrontCover adds a front cover when none exists', () {
       final bytes = buildTestFlac(paddingSize: 512);
       final doc = FlacParser.parseBytes(bytes);
-      final front = coverBlock(PictureType.frontCover, [0x01],
-          description: 'new front');
+      final front =
+          coverBlock(PictureType.frontCover, [0x01], description: 'new front');
       final updated = doc.edit((e) => e.setFrontCover(front));
       expect(updated.frontCoverPicture, isNotNull);
       expect(updated.frontCoverPicture!.description, equals('new front'));
@@ -231,8 +231,8 @@ void main() {
     test('setBackCover adds a back cover when none exists', () {
       final bytes = buildTestFlac(paddingSize: 512);
       final doc = FlacParser.parseBytes(bytes);
-      final back = coverBlock(PictureType.backCover, [0x02],
-          description: 'new back');
+      final back =
+          coverBlock(PictureType.backCover, [0x02], description: 'new back');
       final updated = doc.edit((e) => e.setBackCover(back));
       expect(updated.backCoverPicture, isNotNull);
       expect(updated.backCoverPicture!.description, equals('new back'));

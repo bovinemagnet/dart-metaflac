@@ -103,14 +103,12 @@ final class FlacMetadataDocument {
   /// The front cover [PictureBlock] if present, or `null` otherwise.
   ///
   /// Equivalent to `pictureByType(PictureType.frontCover)`.
-  PictureBlock? get frontCoverPicture =>
-      pictureByType(PictureType.frontCover);
+  PictureBlock? get frontCoverPicture => pictureByType(PictureType.frontCover);
 
   /// The back cover [PictureBlock] if present, or `null` otherwise.
   ///
   /// Equivalent to `pictureByType(PictureType.backCover)`.
-  PictureBlock? get backCoverPicture =>
-      pictureByType(PictureType.backCover);
+  PictureBlock? get backCoverPicture => pictureByType(PictureType.backCover);
 
   // ── Factory constructors ──────────────────────────────────────────────────
 
