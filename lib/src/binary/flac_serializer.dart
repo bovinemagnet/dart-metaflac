@@ -27,9 +27,17 @@ class FlacSerializer {
   /// The returned [Uint8List] begins with the FLAC magic marker, followed by
   /// all metadata blocks with correct headers, and ends with the raw audio
   /// data bytes.
+  ///
+  /// When [id3v2Prefix] is non-null it is written verbatim before the magic
+  /// marker, preserving a non-standard ID3v2 tag carried by the source file.
   static Uint8List serialize(
-      List<FlacMetadataBlock> blocks, Uint8List audioData) {
-    final writer = _serializeBlocks(blocks);
+      List<FlacMetadataBlock> blocks, Uint8List audioData,
+      {Uint8List? id3v2Prefix}) {
+    final writer = ByteWriter();
+    if (id3v2Prefix != null && id3v2Prefix.isNotEmpty) {
+      writer.writeBytes(id3v2Prefix);
+    }
+    _serializeBlocks(blocks, writer);
     writer.writeBytes(audioData);
     return writer.toBytes();
   }
@@ -39,13 +47,14 @@ class FlacSerializer {
   /// Unlike [serialize], no audio data is appended. This is used by the
   /// internal stream rewriter, where audio is streamed separately.
   static Uint8List serializeMetadataOnly(List<FlacMetadataBlock> blocks) {
-    return _serializeBlocks(blocks).toBytes();
+    final writer = ByteWriter();
+    _serializeBlocks(blocks, writer);
+    return writer.toBytes();
   }
 
-  /// Write the fLaC marker and all metadata blocks to a [ByteWriter].
-  static ByteWriter _serializeBlocks(List<FlacMetadataBlock> blocks) {
-    final writer = ByteWriter();
-
+  /// Write the fLaC marker and all metadata blocks to [writer].
+  static void _serializeBlocks(
+      List<FlacMetadataBlock> blocks, ByteWriter writer) {
     // fLaC marker
     writer.writeUint8(flacMagicByte0);
     writer.writeUint8(flacMagicByte1);
@@ -69,7 +78,5 @@ class FlacSerializer {
       writer.writeUint24(payload.length);
       writer.writeBytes(payload);
     }
-
-    return writer;
   }
 }

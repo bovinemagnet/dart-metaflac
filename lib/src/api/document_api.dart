@@ -29,7 +29,13 @@ Future<Uint8List> applyMutations(
     }
   });
   final audioData = bytes.sublist(doc.audioDataOffset);
-  return FlacSerializer.serialize(updated.blocks, audioData);
+  return FlacSerializer.serialize(
+    updated.blocks,
+    audioData,
+    id3v2Prefix: doc.id3v2PrefixLength == 0
+        ? null
+        : Uint8List.sublistView(bytes, 0, doc.id3v2PrefixLength),
+  );
 }
 
 Future<Uint8List> _collectBytes(Stream<List<int>> stream) async {

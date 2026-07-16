@@ -17,6 +17,7 @@ import '../model/vorbis_comments.dart';
 import 'byte_reader.dart';
 import 'flac_block_header.dart';
 import 'flac_constants.dart';
+import 'id3v2.dart';
 
 /// Parser that reads raw FLAC bytes into a [FlacMetadataDocument].
 ///
@@ -28,8 +29,13 @@ import 'flac_constants.dart';
 /// their corresponding model objects; unknown block types are preserved as
 /// [UnknownBlock] instances so they survive round-trips.
 ///
+/// A syntactically valid ID3v2 tag prepended to the data is tolerated
+/// (matching libFLAC) and skipped before the marker check; its length is
+/// recorded in [FlacMetadataDocument.id3v2PrefixLength].
+///
 /// Throws [InvalidFlacException] if the data does not begin with the FLAC
-/// magic marker or is missing a STREAMINFO block.
+/// magic marker (optionally after an ID3v2 tag) or is missing a STREAMINFO
+/// block.
 /// Throws [MalformedMetadataException] if a block header declares a payload
 /// length that exceeds the remaining data.
 class FlacParser {
@@ -50,28 +56,34 @@ class FlacParser {
 
   /// Parse a FLAC byte buffer into a [FlacMetadataDocument].
   ///
-  /// Validate the four-byte FLAC magic marker, then read each metadata block
-  /// header and payload sequentially. The resulting document records the byte
-  /// offset where audio data begins so that serialisation can reconstruct the
+  /// Skip a syntactically valid leading ID3v2 tag when present (recording
+  /// its length in [FlacMetadataDocument.id3v2PrefixLength]), validate the
+  /// four-byte FLAC magic marker, then read each metadata block header and
+  /// payload sequentially. The resulting document records the byte offset
+  /// where audio data begins so that serialisation can reconstruct the
   /// full file.
   ///
   /// Throws [InvalidFlacException] if [bytes] is too short, lacks a valid
-  /// FLAC marker, or contains no STREAMINFO block.
+  /// FLAC marker after any ID3v2 tag, or contains no STREAMINFO block.
   /// Throws [MalformedMetadataException] if a metadata block extends beyond
   /// the available data.
   static FlacMetadataDocument parseBytes(Uint8List bytes) {
-    if (bytes.length < 4) {
+    // Taggers in the wild prepend ID3v2 tags to .flac files even though
+    // the FLAC spec doesn't sanction them. Match libFLAC: skip the tag
+    // and look for the fLaC marker immediately after it.
+    final id3v2PrefixLength = leadingId3v2Length(bytes);
+    if (bytes.length < id3v2PrefixLength + 4) {
       throw InvalidFlacException('File too short to be a FLAC file');
     }
-    if (bytes[0] != flacMagicByte0 ||
-        bytes[1] != flacMagicByte1 ||
-        bytes[2] != flacMagicByte2 ||
-        bytes[3] != flacMagicByte3) {
+    if (bytes[id3v2PrefixLength] != flacMagicByte0 ||
+        bytes[id3v2PrefixLength + 1] != flacMagicByte1 ||
+        bytes[id3v2PrefixLength + 2] != flacMagicByte2 ||
+        bytes[id3v2PrefixLength + 3] != flacMagicByte3) {
       throw InvalidFlacException('Invalid FLAC marker');
     }
 
     final reader = ByteReader(bytes);
-    reader.skip(4); // consume fLaC marker
+    reader.skip(id3v2PrefixLength + 4); // consume ID3v2 tag + fLaC marker
 
     final blocks = <FlacMetadataBlock>[];
 
@@ -106,7 +118,8 @@ class FlacParser {
     return FlacMetadataDocument(
       blocks: blocks,
       audioDataOffset: audioDataOffset,
-      sourceMetadataRegionLength: audioDataOffset,
+      sourceMetadataRegionLength: audioDataOffset - id3v2PrefixLength,
+      id3v2PrefixLength: id3v2PrefixLength,
     );
   }
 

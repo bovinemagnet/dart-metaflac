@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import '../binary/flac_constants.dart';
 import '../binary/flac_parser.dart';
 import '../binary/flac_serializer.dart';
+import '../binary/id3v2.dart';
 import '../edit/flac_metadata_editor.dart';
 import '../edit/mutation_ops.dart';
 import 'flac_transform_options.dart';
@@ -69,8 +70,12 @@ class StreamRewriter {
     // Serialise new metadata only.
     final newMetadata = FlacSerializer.serializeMetadataOnly(updated.blocks);
 
-    // Emit metadata then audio chunks.
+    // Emit ID3v2 prefix (if any), metadata, then audio chunks.
     final controller = StreamController<List<int>>();
+    if (doc.id3v2PrefixLength > 0) {
+      controller
+          .add(Uint8List.sublistView(accumulated, 0, doc.id3v2PrefixLength));
+    }
     controller.add(newMetadata);
     for (final audioChunk in audioChunks) {
       controller.add(audioChunk);
@@ -82,21 +87,23 @@ class StreamRewriter {
 
   /// Scans accumulated bytes for the metadata/audio boundary.
   ///
-  /// Walks block headers from offset 4 (after fLaC marker) until the
-  /// isLast block is found. Returns the offset where audio data begins,
-  /// or null if not enough bytes have been accumulated yet.
+  /// Skips a leading ID3v2 tag when present (matching [FlacParser]), then
+  /// walks block headers from just after the fLaC marker until the isLast
+  /// block is found. Returns the offset where audio data begins, or null
+  /// if not enough bytes have been accumulated yet.
   static int? _findAudioOffset(Uint8List data) {
-    if (data.length < 4) return null;
+    final prefixLength = leadingId3v2Length(data);
+    if (data.length < prefixLength + 4) return null;
 
     // Check fLaC marker.
-    if (data[0] != flacMagicByte0 ||
-        data[1] != flacMagicByte1 ||
-        data[2] != flacMagicByte2 ||
-        data[3] != flacMagicByte3) {
+    if (data[prefixLength] != flacMagicByte0 ||
+        data[prefixLength + 1] != flacMagicByte1 ||
+        data[prefixLength + 2] != flacMagicByte2 ||
+        data[prefixLength + 3] != flacMagicByte3) {
       return null;
     }
 
-    var offset = 4; // Skip fLaC marker.
+    var offset = prefixLength + 4; // Skip ID3v2 tag + fLaC marker.
     while (offset + flacMetadataHeaderSize <= data.length) {
       final headerByte = data[offset];
       final isLast = (headerByte & 0x80) != 0;

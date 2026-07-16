@@ -1,4 +1,4 @@
-## Unreleased
+## 0.0.3
 
 ### Library additions
 
@@ -9,6 +9,17 @@
 - `FlacMetadataEditor.setFrontCover(PictureBlock)` and
   `setBackCover(PictureBlock)` — upsert semantics: remove any existing
   cover of the same type, then append the new block.
+
+### Fixed
+
+- Parse FLAC files that carry a non-standard prepended ID3v2 tag,
+  matching libFLAC: the tag is skipped when locating the `fLaC`
+  marker and exposed as `FlacMetadataDocument.id3v2PrefixLength`.
+  Every write path — `toBytes()`, `transformFlac`,
+  `FlacTransformer.transform`/`transformStream`, `applyMutations`,
+  and file/CLI writes — writes the prefix back byte-for-byte so
+  round-trips never corrupt such files. Previously these files
+  failed with `InvalidFlacException: Invalid FLAC marker`.
 
 ## 0.0.2
 

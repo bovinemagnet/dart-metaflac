@@ -40,6 +40,7 @@ final class FlacMetadataDocument {
     required this.audioDataOffset,
     required this.sourceMetadataRegionLength,
     this.sourceBytes,
+    this.id3v2PrefixLength = 0,
   });
 
   /// The ordered list of metadata blocks in this document.
@@ -66,6 +67,15 @@ final class FlacMetadataDocument {
   /// This is `null` when the document was constructed directly rather than
   /// parsed from a byte source.
   final Uint8List? sourceBytes;
+
+  /// The byte length of a non-standard ID3v2 tag prepended to the source,
+  /// or 0 when the file starts with the `fLaC` marker as the spec requires.
+  ///
+  /// Some taggers write ID3v2 tags onto FLAC files; the parser skips them
+  /// (matching libFLAC) and every write path — [toBytes], the transform
+  /// APIs, and the stream rewriter — writes the prefix back unchanged so
+  /// a round-trip never corrupts such files.
+  final int id3v2PrefixLength;
 
   /// The mandatory [StreamInfoBlock] for this FLAC file.
   ///
@@ -115,8 +125,11 @@ final class FlacMetadataDocument {
   /// Parse a FLAC file from raw [bytes] and retain them for later
   /// serialisation via [toBytes].
   ///
+  /// A leading ID3v2 tag is tolerated and skipped; its length is recorded
+  /// in [id3v2PrefixLength] and the prefix is preserved on serialisation.
+  ///
   /// Throws [InvalidFlacException] if the bytes do not begin with a valid
-  /// FLAC stream marker.
+  /// FLAC stream marker (optionally after an ID3v2 tag).
   ///
   /// Throws [MalformedMetadataException] if any metadata block cannot be
   /// parsed.
@@ -127,6 +140,7 @@ final class FlacMetadataDocument {
       audioDataOffset: doc.audioDataOffset,
       sourceMetadataRegionLength: doc.sourceMetadataRegionLength,
       sourceBytes: bytes,
+      id3v2PrefixLength: doc.id3v2PrefixLength,
     );
   }
 
@@ -159,7 +173,15 @@ final class FlacMetadataDocument {
       );
     }
     final audioData = sourceBytes!.sublist(audioDataOffset);
-    return FlacSerializer.serialize(blocks, audioData);
+    // The non-standard ID3v2 prefix is written back unchanged so the
+    // round-trip is byte-exact for files that carry one.
+    return FlacSerializer.serialize(
+      blocks,
+      audioData,
+      id3v2Prefix: id3v2PrefixLength == 0
+          ? null
+          : Uint8List.sublistView(sourceBytes!, 0, id3v2PrefixLength),
+    );
   }
 
   // ── Editing ──────────────────────────────────────────────────────────────
@@ -187,6 +209,7 @@ final class FlacMetadataDocument {
       audioDataOffset: built.audioDataOffset,
       sourceMetadataRegionLength: built.sourceMetadataRegionLength,
       sourceBytes: sourceBytes,
+      id3v2PrefixLength: id3v2PrefixLength,
     );
   }
 }
