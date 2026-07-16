@@ -88,6 +88,30 @@ class FlacMetadataEditor {
   /// Enqueues a [RemoveAllPictures] mutation.
   void removeAllPictures() => _mutations.add(const RemoveAllPictures());
 
+  /// Set the front cover picture.
+  ///
+  /// Removes any existing [PictureBlock] of type [PictureType.frontCover]
+  /// and appends [picture]. Safe to call whether or not a front cover is
+  /// already present (upsert semantics). The [picture]'s `pictureType`
+  /// field should already be [PictureType.frontCover]; no conversion is
+  /// performed.
+  void setFrontCover(PictureBlock picture) {
+    removePictureByType(PictureType.frontCover);
+    addPicture(picture);
+  }
+
+  /// Set the back cover picture.
+  ///
+  /// Removes any existing [PictureBlock] of type [PictureType.backCover]
+  /// and appends [picture]. Safe to call whether or not a back cover is
+  /// already present (upsert semantics). The [picture]'s `pictureType`
+  /// field should already be [PictureType.backCover]; no conversion is
+  /// performed.
+  void setBackCover(PictureBlock picture) {
+    removePictureByType(PictureType.backCover);
+    addPicture(picture);
+  }
+
   /// Set the padding to [size] bytes.
   ///
   /// Enqueues a [SetPadding] mutation. Existing padding blocks are

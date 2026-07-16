@@ -46,8 +46,33 @@ void main() {
 
   print('Pictures after adding back cover: ${withBoth.pictures.length}');
 
+  // Convenience read-side lookups by type.
+  print('Front cover: ${withBoth.frontCoverPicture?.description}');
+  print('Back cover:  ${withBoth.backCoverPicture?.description}');
+  final leaflet = withBoth.pictureByType(PictureType.leafletPage);
+  print('Leaflet:     ${leaflet == null ? 'none' : leaflet.description}');
+
+  // Replace the front cover via the setFrontCover helper (upsert: removes
+  // any existing front cover first, then appends the new block).
+  final newFront = withBoth.edit((editor) {
+    editor.setFrontCover(PictureBlock(
+      pictureType: PictureType.frontCover,
+      mimeType: 'image/jpeg',
+      description: 'Remastered front cover',
+      width: 1000,
+      height: 1000,
+      colorDepth: 24,
+      indexedColors: 0,
+      data: Uint8List.fromList([0xFF, 0xD8, 0xFF, 0xE1]),
+    ));
+  });
+
+  print('Front cover after setFrontCover: '
+      '${newFront.frontCoverPicture?.description}');
+  print('Total pictures (should still be 2): ${newFront.pictures.length}');
+
   // Remove pictures by type.
-  final withoutBack = withBoth.edit((editor) {
+  final withoutBack = newFront.edit((editor) {
     editor.removePictureByType(PictureType.backCover);
   });
 

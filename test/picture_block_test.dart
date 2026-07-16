@@ -127,4 +127,110 @@ void main() {
       }
     });
   });
+
+  group('FlacMetadataDocument picture lookups', () {
+    PictureBlock makePicture(PictureType type, {int marker = 0}) {
+      return PictureBlock(
+        pictureType: type,
+        mimeType: 'image/jpeg',
+        description: 'pic-$marker',
+        width: 0,
+        height: 0,
+        colorDepth: 0,
+        indexedColors: 0,
+        data: Uint8List.fromList([marker & 0xFF]),
+      );
+    }
+
+    FlacMetadataDocument buildDocWithPictures(List<PictureBlock> pics) {
+      final siData = Uint8List(34);
+      final out = BytesBuilder();
+      // fLaC marker
+      out.addByte(0x66);
+      out.addByte(0x4C);
+      out.addByte(0x61);
+      out.addByte(0x43);
+      // STREAMINFO (non-last when followed by pictures, otherwise last)
+      final streamInfoIsLast = pics.isEmpty;
+      out.addByte(streamInfoIsLast ? 0x80 : 0x00);
+      out.addByte(0);
+      out.addByte(0);
+      out.addByte(34);
+      out.add(siData);
+      for (var i = 0; i < pics.length; i++) {
+        final payload = pics[i].toPayloadBytes();
+        final isLast = i == pics.length - 1;
+        out.addByte((isLast ? 0x80 : 0x00) | 0x06);
+        out.addByte((payload.length >> 16) & 0xFF);
+        out.addByte((payload.length >> 8) & 0xFF);
+        out.addByte(payload.length & 0xFF);
+        out.add(payload);
+      }
+      return FlacMetadataDocument.readFromBytes(
+        Uint8List.fromList(out.toBytes()),
+      );
+    }
+
+    test('pictureByType returns the matching block when present', () {
+      final doc = buildDocWithPictures([
+        makePicture(PictureType.frontCover, marker: 1),
+        makePicture(PictureType.backCover, marker: 2),
+      ]);
+      final front = doc.pictureByType(PictureType.frontCover);
+      expect(front, isNotNull);
+      expect(front!.description, equals('pic-1'));
+    });
+
+    test('pictureByType returns null when no block of that type exists', () {
+      final doc = buildDocWithPictures([
+        makePicture(PictureType.leafletPage, marker: 9),
+      ]);
+      expect(doc.pictureByType(PictureType.frontCover), isNull);
+    });
+
+    test('pictureByType returns the first match in document order', () {
+      final doc = buildDocWithPictures([
+        makePicture(PictureType.frontCover, marker: 1),
+        makePicture(PictureType.frontCover, marker: 2),
+      ]);
+      final front = doc.pictureByType(PictureType.frontCover);
+      expect(front, isNotNull);
+      expect(front!.description, equals('pic-1'));
+    });
+
+    test('frontCoverPicture returns the front cover when present', () {
+      final doc = buildDocWithPictures([
+        makePicture(PictureType.backCover, marker: 1),
+        makePicture(PictureType.frontCover, marker: 2),
+      ]);
+      expect(doc.frontCoverPicture?.description, equals('pic-2'));
+    });
+
+    test('backCoverPicture returns the back cover when present', () {
+      final doc = buildDocWithPictures([
+        makePicture(PictureType.frontCover, marker: 1),
+        makePicture(PictureType.backCover, marker: 2),
+      ]);
+      expect(doc.backCoverPicture?.description, equals('pic-2'));
+    });
+
+    test(
+        'cover getters return null when the cover is absent but other pictures exist',
+        () {
+      final doc = buildDocWithPictures([
+        makePicture(PictureType.leafletPage, marker: 1),
+        makePicture(PictureType.artist, marker: 2),
+      ]);
+      expect(doc.frontCoverPicture, isNull);
+      expect(doc.backCoverPicture, isNull);
+    });
+
+    test('all lookups return null when the document has no pictures', () {
+      final doc = buildDocWithPictures([]);
+      expect(doc.pictures, isEmpty);
+      expect(doc.pictureByType(PictureType.frontCover), isNull);
+      expect(doc.frontCoverPicture, isNull);
+      expect(doc.backCoverPicture, isNull);
+    });
+  });
 }

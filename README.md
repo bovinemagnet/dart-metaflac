@@ -98,6 +98,27 @@ final withCover = doc.edit((editor) {
 });
 ```
 
+For the common case of a single front or back cover, use the `setFrontCover`
+/ `setBackCover` helpers. They replace any existing cover of the same type,
+so they are safe to call whether or not one is already present:
+
+```dart
+final withCover = doc.edit((editor) {
+  editor.setFrontCover(PictureBlock(
+    pictureType: PictureType.frontCover,
+    mimeType: 'image/jpeg',
+    description: 'Front cover',
+    width: 500, height: 500, colorDepth: 24, indexedColors: 0,
+    data: jpegBytes,
+  ));
+});
+
+// Read them back by type:
+final front = withCover.frontCoverPicture;          // PictureBlock?
+final back  = withCover.backCoverPicture;           // PictureBlock?
+final icon  = withCover.pictureByType(PictureType.fileIcon32x32);
+```
+
 ### Edit a file on disc (native only)
 
 ```dart

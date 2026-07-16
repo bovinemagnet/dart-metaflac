@@ -5,6 +5,7 @@ import '../binary/flac_serializer.dart';
 import '../edit/flac_metadata_editor.dart';
 import 'flac_metadata_block.dart';
 import 'picture_block.dart';
+import 'picture_type.dart';
 import 'stream_info_block.dart';
 import 'vorbis_comment_block.dart';
 
@@ -87,6 +88,29 @@ final class FlacMetadataDocument {
   /// different image (e.g. front cover, back cover, artist photo).
   List<PictureBlock> get pictures =>
       blocks.whereType<PictureBlock>().toList(growable: false);
+
+  /// Return the first [PictureBlock] with the given [type], or `null` if
+  /// none is present.
+  ///
+  /// If multiple picture blocks share the same type, the earliest block in
+  /// document order is returned. Use [pictures] directly if you need every
+  /// match.
+  PictureBlock? pictureByType(PictureType type) => blocks
+      .whereType<PictureBlock>()
+      .where((p) => p.pictureType == type)
+      .firstOrNull;
+
+  /// The front cover [PictureBlock] if present, or `null` otherwise.
+  ///
+  /// Equivalent to `pictureByType(PictureType.frontCover)`.
+  PictureBlock? get frontCoverPicture =>
+      pictureByType(PictureType.frontCover);
+
+  /// The back cover [PictureBlock] if present, or `null` otherwise.
+  ///
+  /// Equivalent to `pictureByType(PictureType.backCover)`.
+  PictureBlock? get backCoverPicture =>
+      pictureByType(PictureType.backCover);
 
   // ── Factory constructors ──────────────────────────────────────────────────
 

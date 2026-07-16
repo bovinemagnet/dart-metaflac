@@ -187,5 +187,68 @@ void main() {
       }
       expect(found, isTrue, reason: 'Audio sync bytes should be preserved');
     });
+
+    PictureBlock coverBlock(PictureType type, List<int> data,
+        {String description = ''}) {
+      return PictureBlock(
+        pictureType: type,
+        mimeType: 'image/jpeg',
+        description: description,
+        width: 0,
+        height: 0,
+        colorDepth: 0,
+        indexedColors: 0,
+        data: Uint8List.fromList(data),
+      );
+    }
+
+    test('setFrontCover adds a front cover when none exists', () {
+      final bytes = buildTestFlac(paddingSize: 512);
+      final doc = FlacParser.parseBytes(bytes);
+      final front = coverBlock(PictureType.frontCover, [0x01],
+          description: 'new front');
+      final updated = doc.edit((e) => e.setFrontCover(front));
+      expect(updated.frontCoverPicture, isNotNull);
+      expect(updated.frontCoverPicture!.description, equals('new front'));
+      expect(updated.pictures.length, equals(1));
+    });
+
+    test('setFrontCover replaces an existing front cover', () {
+      final oldFront =
+          coverBlock(PictureType.frontCover, [0x01], description: 'old');
+      final back =
+          coverBlock(PictureType.backCover, [0x02], description: 'back');
+      final bytes = buildTestFlac(paddingSize: 512, pictures: [oldFront, back]);
+      final doc = FlacParser.parseBytes(bytes);
+      final newFront =
+          coverBlock(PictureType.frontCover, [0x03], description: 'new');
+      final updated = doc.edit((e) => e.setFrontCover(newFront));
+      expect(updated.pictures.length, equals(2));
+      expect(updated.frontCoverPicture!.description, equals('new'));
+      expect(updated.backCoverPicture!.description, equals('back'));
+    });
+
+    test('setBackCover adds a back cover when none exists', () {
+      final bytes = buildTestFlac(paddingSize: 512);
+      final doc = FlacParser.parseBytes(bytes);
+      final back = coverBlock(PictureType.backCover, [0x02],
+          description: 'new back');
+      final updated = doc.edit((e) => e.setBackCover(back));
+      expect(updated.backCoverPicture, isNotNull);
+      expect(updated.backCoverPicture!.description, equals('new back'));
+    });
+
+    test('setBackCover leaves an existing front cover untouched', () {
+      final front =
+          coverBlock(PictureType.frontCover, [0x01], description: 'front');
+      final bytes = buildTestFlac(paddingSize: 512, pictures: [front]);
+      final doc = FlacParser.parseBytes(bytes);
+      final back =
+          coverBlock(PictureType.backCover, [0x02], description: 'back');
+      final updated = doc.edit((e) => e.setBackCover(back));
+      expect(updated.frontCoverPicture!.description, equals('front'));
+      expect(updated.backCoverPicture!.description, equals('back'));
+      expect(updated.pictures.length, equals(2));
+    });
   });
 }
