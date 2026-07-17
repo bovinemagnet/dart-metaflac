@@ -45,7 +45,7 @@ Uint8List withId3v2Prefix(
 }
 
 VorbisCommentBlock _comment() => VorbisCommentBlock(
-      comments: const VorbisComments(
+      comments: VorbisComments(
         vendorString: 'test',
         entries: [
           VorbisCommentEntry(key: 'ARTIST', value: 'Cappella'),

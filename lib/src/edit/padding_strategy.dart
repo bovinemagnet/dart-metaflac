@@ -5,9 +5,6 @@
 class PaddingStrategy {
   PaddingStrategy._();
 
-  /// Default padding size in bytes appended when creating new metadata.
-  static const int defaultPadding = 8192;
-
   /// Compute the remaining padding after writing new metadata content
   /// into the original metadata region.
   ///

@@ -13,7 +13,8 @@ enum WriteMode {
   auto,
 
   /// Attempt an in-place overwrite of the metadata region when the new
-  /// metadata fits. Falls back to a full rewrite if it does not fit.
+  /// metadata fits. Throws a `WriteConflictException` if it does not fit;
+  /// use [auto] to fall back to an atomic rewrite instead.
   inPlaceIfPossible,
 
   /// Write the transformed output to a new file, leaving the original

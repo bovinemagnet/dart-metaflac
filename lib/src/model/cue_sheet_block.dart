@@ -38,13 +38,13 @@ final class CueSheetBlock extends FlacMetadataBlock {
   ///
   /// The [rawPayload] must contain the complete original cue sheet bytes
   /// for faithful round-trip serialisation.
-  const CueSheetBlock({
+  CueSheetBlock({
     required this.mediaCatalogNumber,
     required this.leadInSamples,
     required this.isCd,
-    required this.tracks,
+    required List<CueSheetTrack> tracks,
     required this.rawPayload,
-  });
+  }) : tracks = List.unmodifiable(tracks);
 
   /// The media catalogue number (UPC/EAN), up to 128 bytes, NUL-padded.
   final String mediaCatalogNumber;
@@ -55,7 +55,7 @@ final class CueSheetBlock extends FlacMetadataBlock {
   /// Whether this cue sheet corresponds to a Compact Disc.
   final bool isCd;
 
-  /// The ordered list of tracks in this cue sheet.
+  /// The ordered list of tracks in this cue sheet (unmodifiable).
   final List<CueSheetTrack> tracks;
 
   /// Original bytes preserved for round-trip fidelity.

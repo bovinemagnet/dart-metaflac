@@ -11,9 +11,12 @@
 ///
 /// Future<void> main() async {
 ///   final doc = await FlacFileEditor.readFile('song.flac');
+///   print(doc.streamInfo.sampleRate);
 ///   await FlacFileEditor.updateFile(
 ///     'song.flac',
-///     (editor) => editor.setTag('ARTIST', ['New Artist']),
+///     mutations: [
+///       SetTag('ARTIST', ['New Artist']),
+///     ],
 ///     options: const FlacWriteOptions(preserveModTime: true),
 ///   );
 /// }

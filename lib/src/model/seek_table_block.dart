@@ -38,9 +38,10 @@ final class SeekPoint {
 /// - [FlacBlockType.seekTable] for the block type code.
 final class SeekTableBlock extends FlacMetadataBlock {
   /// Create a [SeekTableBlock] with the given list of seek [points].
-  const SeekTableBlock({required this.points});
+  SeekTableBlock({required List<SeekPoint> points})
+      : points = List.unmodifiable(points);
 
-  /// The ordered list of seek points in this table.
+  /// The ordered list of seek points in this table (unmodifiable).
   final List<SeekPoint> points;
 
   @override

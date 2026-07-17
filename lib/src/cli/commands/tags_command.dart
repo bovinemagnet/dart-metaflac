@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
@@ -322,16 +323,24 @@ class TagsImportCommand extends BaseFlacCommand {
       throw UsageException('--from is required.', usage);
     }
 
-    final tagFile = File(fromPath);
-    if (!tagFile.existsSync()) {
-      writeError(
-          fromPath, 'Tag file not found: $fromPath', 'FileSystemException');
-      return 4;
+    // `--from -` reads from stdin, matching real metaflac.
+    final List<String> rawLines;
+    if (fromPath == '-') {
+      rawLines = await stdin
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .toList();
+    } else {
+      final tagFile = File(fromPath);
+      if (!tagFile.existsSync()) {
+        writeError(
+            fromPath, 'Tag file not found: $fromPath', 'FileSystemException');
+        return 4;
+      }
+      rawLines = tagFile.readAsStringSync().split('\n');
     }
 
-    final lines = tagFile
-        .readAsStringSync()
-        .split('\n')
+    final lines = rawLines
         .map((l) => l.trim())
         .where((l) => l.isNotEmpty && !l.startsWith('#'));
 
