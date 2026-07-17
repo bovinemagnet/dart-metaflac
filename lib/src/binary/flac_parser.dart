@@ -261,8 +261,11 @@ class FlacParser {
           _decodeUtf8(reader.readBytes(len), 'Vorbis comment entry');
       final eqIdx = commentStr.indexOf('=');
       if (eqIdx >= 0) {
+        // Keys are matched case-insensitively (via canonicalKey) but the
+        // original casing is preserved, matching the reference metaflac,
+        // so mixed-case keys round-trip byte-for-byte.
         entries.add(VorbisCommentEntry(
-          key: commentStr.substring(0, eqIdx).toUpperCase(),
+          key: commentStr.substring(0, eqIdx),
           value: commentStr.substring(eqIdx + 1),
         ));
       }
