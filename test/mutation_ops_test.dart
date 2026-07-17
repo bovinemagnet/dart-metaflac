@@ -76,6 +76,67 @@ Uint8List buildFlacFixture({int paddingSize = 512}) {
   return out.toBytes();
 }
 
+/// FLAC fixture with padding scattered through the block list:
+/// STREAMINFO, PADDING(100), PADDING(200), VORBIS_COMMENT, PADDING(300).
+Uint8List buildScatteredPaddingFixture() {
+  final siData = Uint8List(34);
+  siData[10] = (44100 >> 12) & 0xFF;
+  siData[11] = (44100 >> 4) & 0xFF;
+  siData[12] = ((44100 & 0xF) << 4) | (1 << 1) | 0; // 2ch, 16bps hi
+  siData[13] = (15 << 4); // 16bps lo
+
+  final vc = VorbisCommentBlock(
+    comments: VorbisComments(
+      vendorString: 'fixture_vendor',
+      entries: [VorbisCommentEntry(key: 'TITLE', value: 'Padded Title')],
+    ),
+  );
+  final vcData = vc.toPayloadBytes();
+
+  final out = BytesBuilder();
+  out.addByte(0x66);
+  out.addByte(0x4C);
+  out.addByte(0x61);
+  out.addByte(0x43);
+
+  // STREAMINFO
+  out.addByte(0x00);
+  out.addByte(0);
+  out.addByte(0);
+  out.addByte(34);
+  out.add(siData);
+
+  // PADDING (100) and PADDING (200), adjacent
+  for (final size in [100, 200]) {
+    out.addByte(0x01);
+    out.addByte((size >> 16) & 0xFF);
+    out.addByte((size >> 8) & 0xFF);
+    out.addByte(size & 0xFF);
+    out.add(Uint8List(size));
+  }
+
+  // VORBIS_COMMENT
+  out.addByte(0x04);
+  out.addByte((vcData.length >> 16) & 0xFF);
+  out.addByte((vcData.length >> 8) & 0xFF);
+  out.addByte(vcData.length & 0xFF);
+  out.add(vcData);
+
+  // PADDING (300, last)
+  out.addByte(0x80 | 0x01);
+  out.addByte((300 >> 16) & 0xFF);
+  out.addByte((300 >> 8) & 0xFF);
+  out.addByte(300 & 0xFF);
+  out.add(Uint8List(300));
+
+  // Fake audio data
+  out.addByte(0xFF);
+  out.addByte(0xF8);
+  out.add(Uint8List(128));
+
+  return out.toBytes();
+}
+
 void main() {
   group('MetadataMutation types', () {
     test('SetTag stores key and values', () {
@@ -150,6 +211,89 @@ void main() {
       const rap = RemoveAllPictures();
       expect(ct, isA<MetadataMutation>());
       expect(rap, isA<MetadataMutation>());
+    });
+
+    test('MergeAdjacentPadding and SortPadding are const constructable', () {
+      const mp = MergeAdjacentPadding();
+      const sp = SortPadding();
+      expect(mp, isA<MetadataMutation>());
+      expect(sp, isA<MetadataMutation>());
+    });
+  });
+
+  group('padding merge and sort mutations', () {
+    late FlacMetadataDocument doc;
+
+    setUp(() {
+      doc = FlacMetadataDocument.readFromBytes(buildScatteredPaddingFixture());
+    });
+
+    test('fixture has the expected scattered padding layout', () {
+      expect(doc.blocks.length, equals(5));
+      expect(doc.blocks[0], isA<StreamInfoBlock>());
+      expect(doc.blocks[1], isA<PaddingBlock>());
+      expect(doc.blocks[2], isA<PaddingBlock>());
+      expect(doc.blocks[3], isA<VorbisCommentBlock>());
+      expect(doc.blocks[4], isA<PaddingBlock>());
+    });
+
+    test('mergeAdjacentPadding coalesces adjacent padding runs', () {
+      final updated = doc.edit((e) => e.mergeAdjacentPadding());
+      // The two adjacent blocks merge; the absorbed block's 4-byte header
+      // becomes padding, matching FLAC__metadata_chain_merge_padding.
+      expect(updated.blocks.length, equals(4));
+      expect(updated.blocks[0], isA<StreamInfoBlock>());
+      expect(updated.blocks[1], isA<PaddingBlock>());
+      expect((updated.blocks[1] as PaddingBlock).size, equals(100 + 4 + 200));
+      expect(updated.blocks[2], isA<VorbisCommentBlock>());
+      expect(updated.blocks[3], isA<PaddingBlock>());
+      expect((updated.blocks[3] as PaddingBlock).size, equals(300));
+    });
+
+    test('mergeAdjacentPadding is a no-op with a single padding block', () {
+      final single = FlacParser.parseBytes(buildFlacFixture(paddingSize: 512));
+      final updated = single.edit((e) => e.mergeAdjacentPadding());
+      expect(updated.blocks.length, equals(single.blocks.length));
+      final padding = updated.blocks.whereType<PaddingBlock>().single;
+      expect(padding.size, equals(512));
+    });
+
+    test('sortPadding moves all padding to the tail and merges into one', () {
+      final updated = doc.edit((e) => e.sortPadding());
+      expect(updated.blocks.length, equals(3));
+      expect(updated.blocks[0], isA<StreamInfoBlock>());
+      expect(updated.blocks[1], isA<VorbisCommentBlock>());
+      expect(updated.blocks[2], isA<PaddingBlock>());
+      // Two absorbed headers of 4 bytes each become padding.
+      expect((updated.blocks[2] as PaddingBlock).size,
+          equals(100 + 4 + 200 + 4 + 300));
+    });
+
+    test('sortPadding is a no-op when no padding is present', () {
+      final noPadding = doc.edit((e) => e.setPadding(0));
+      final updated = noPadding.edit((e) => e.sortPadding());
+      expect(updated.blocks.whereType<PaddingBlock>(), isEmpty);
+      expect(updated.blocks.length, equals(noPadding.blocks.length));
+    });
+
+    test('mergeAdjacentPadding survives a serialisation round-trip', () {
+      final updated = doc.edit((e) => e.mergeAdjacentPadding());
+      final reparsed = FlacMetadataDocument.readFromBytes(updated.toBytes());
+      final padding = reparsed.blocks.whereType<PaddingBlock>().toList();
+      expect(padding.length, equals(2));
+      expect(padding[0].size, equals(304));
+      expect(padding[1].size, equals(300));
+      expect(reparsed.vorbisComment!.comments.valuesOf('TITLE'),
+          equals(['Padded Title']));
+    });
+
+    test('sortPadding survives a serialisation round-trip', () {
+      final updated = doc.edit((e) => e.sortPadding());
+      final reparsed = FlacMetadataDocument.readFromBytes(updated.toBytes());
+      final padding = reparsed.blocks.whereType<PaddingBlock>().toList();
+      expect(padding.length, equals(1));
+      expect(padding.single.size, equals(608));
+      expect(reparsed.blocks.last, isA<PaddingBlock>());
     });
   });
 

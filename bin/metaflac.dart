@@ -82,6 +82,13 @@ Future<void> main(List<String> args) async {
     ..addOption('except-block-type',
         help: 'Block types to keep (comma-separated)')
     ..addOption('block-number', help: '0-based block indices (comma-separated)')
+    // ── Tier 4: padding arrangement ─────────────────────────────────────
+    ..addFlag('merge-padding',
+        help: 'Combine adjacent PADDING blocks into single blocks',
+        negatable: false)
+    ..addFlag('sort-padding',
+        help: 'Move all PADDING blocks to the end and merge into one block',
+        negatable: false)
     // ── Global options ──────────────────────────────────────────────────
     ..addOption('output-name',
         abbr: 'o',
@@ -192,6 +199,10 @@ Future<int> _processFile({
     final blockTypeOpt = results['block-type'] as String?;
     final exceptBlockTypeOpt = results['except-block-type'] as String?;
     final blockNumberOpt = results['block-number'] as String?;
+
+    // Tier 4 padding-arrangement flags.
+    final mergePadding = results['merge-padding'] as bool;
+    final sortPadding = results['sort-padding'] as bool;
 
     // ── Read operations ─────────────────────────────────────────────────
 
@@ -399,7 +410,9 @@ Future<int> _processFile({
         importPictureFrom != null ||
         removeFlag ||
         removeAll ||
-        appendPath != null;
+        appendPath != null ||
+        mergePadding ||
+        sortPadding;
 
     if (!hasWriteOp) {
       stderr.writeln('No operation specified. Use --help for usage.');
@@ -590,6 +603,14 @@ Future<int> _processFile({
       ));
     }
 
+    // Tier 4 padding arrangement. --sort-padding subsumes --merge-padding,
+    // so only one mutation is needed when both are given.
+    if (sortPadding) {
+      mutations.add(const SortPadding());
+    } else if (mergePadding) {
+      mutations.add(const MergeAdjacentPadding());
+    }
+
     if (dryRun) {
       final result = await transformFlac(bytes, mutations);
       if (useJson) {
@@ -662,6 +683,8 @@ Future<int> _processFile({
         if (m is RemovePictureByType) picturesRemoved++;
         if (m is RemoveAllPictures) picturesRemoved++;
         if (m is SetPadding) changes['paddingSet'] = m.size;
+        if (m is MergeAdjacentPadding) changes['paddingMerged'] = true;
+        if (m is SortPadding) changes['paddingSorted'] = true;
       }
 
       if (tagsSet.isNotEmpty) changes['tagsSet'] = tagsSet;

@@ -200,6 +200,30 @@ final class SetPadding extends MetadataMutation {
   final int size;
 }
 
+/// Merge runs of adjacent [PaddingBlock]s into single blocks.
+///
+/// Each absorbed block's 4-byte header becomes padding, so the merged
+/// block's size is the sum of the run's sizes plus 4 bytes per absorbed
+/// block. This keeps the total metadata region size unchanged, matching
+/// upstream `metaflac --merge-padding`.
+///
+/// See also: [SortPadding], which additionally moves padding to the tail.
+final class MergeAdjacentPadding extends MetadataMutation {
+  /// Create a mutation that merges adjacent padding blocks.
+  const MergeAdjacentPadding();
+}
+
+/// Move every [PaddingBlock] to the end of the metadata block list and
+/// merge them into a single block.
+///
+/// As with [MergeAdjacentPadding], each absorbed block's 4-byte header
+/// becomes padding, keeping the total metadata region size unchanged.
+/// Mirrors upstream `metaflac --sort-padding`.
+final class SortPadding extends MetadataMutation {
+  /// Create a mutation that moves all padding to the tail and merges it.
+  const SortPadding();
+}
+
 /// Remove every metadata block whose [FlacBlockType] is in [types].
 ///
 /// STREAMINFO (type 0) is mandatory per the FLAC specification. Including

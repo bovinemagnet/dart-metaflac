@@ -631,6 +631,104 @@ void main() {
     });
   });
 
+  group('padding merge and sort', () {
+    /// STREAMINFO, PADDING(100), PADDING(200), PADDING(300, last), audio.
+    Uint8List flacWithScatteredPadding() {
+      final base = buildFlac(paddingSize: -1); // fLaC + STREAMINFO + audio
+      const siEnd = 4 + 4 + 34;
+      final head = Uint8List.fromList(base.sublist(0, siEnd));
+      head[4] &= 0x7F; // clear the is-last bit on the STREAMINFO header
+      final out = BytesBuilder();
+      out.add(head);
+      for (final (i, size) in [100, 200, 300].indexed) {
+        out.addByte((i == 2 ? 0x80 : 0x00) | 0x01);
+        out.addByte((size >> 16) & 0xFF);
+        out.addByte((size >> 8) & 0xFF);
+        out.addByte(size & 0xFF);
+        out.add(Uint8List(size));
+      }
+      out.add(base.sublist(siEnd)); // fake audio
+      return out.toBytes();
+    }
+
+    Future<List<Map<String, dynamic>>> listBlocks(String path) async {
+      final verify = await runMetaflac(['blocks', 'list', '--json', path]);
+      final json = jsonDecode(verify.stdout as String) as Map<String, dynamic>;
+      return (json['blocks'] as List).cast<Map<String, dynamic>>();
+    }
+
+    test('padding merge coalesces adjacent padding blocks', () async {
+      writeFlac('test.flac', flacWithScatteredPadding());
+
+      final result =
+          await runMetaflac(['padding', 'merge', tmpFile('test.flac')]);
+      expect(result.exitCode, equals(0));
+
+      final blocks = await listBlocks(tmpFile('test.flac'));
+      final paddingBlocks =
+          blocks.where((b) => b['type'] == 'padding').toList();
+      expect(paddingBlocks.length, equals(1));
+      // 100 + 4 + 200 + 4 + 300: absorbed headers become padding.
+      expect(paddingBlocks.single['payloadSize'], equals(608));
+    });
+
+    test('padding sort moves padding to the tail and merges', () async {
+      // buildFlac puts its single padding block last already, so scatter a
+      // vorbis comment after the padding by building bytes directly.
+      final vc = VorbisCommentBlock(
+        comments: VorbisComments(
+          vendorString: 'v',
+          entries: [VorbisCommentEntry(key: 'TITLE', value: 'T')],
+        ),
+      );
+      final vcData = vc.toPayloadBytes();
+      final scattered = flacWithScatteredPadding();
+      // Rebuild: fLaC + STREAMINFO + PADDING(100) + VC + PADDING(200) +
+      // PADDING(300, last) + audio.
+      final out = BytesBuilder();
+      final siEnd = 4 + 4 + 34;
+      out.add(scattered.sublist(0, siEnd));
+      out.addByte(0x01);
+      out.addByte(0);
+      out.addByte(0);
+      out.addByte(100);
+      out.add(Uint8List(100));
+      out.addByte(0x04);
+      out.addByte((vcData.length >> 16) & 0xFF);
+      out.addByte((vcData.length >> 8) & 0xFF);
+      out.addByte(vcData.length & 0xFF);
+      out.add(vcData);
+      out.addByte(0x01);
+      out.addByte(0);
+      out.addByte(0);
+      out.addByte(200);
+      out.add(Uint8List(200));
+      out.addByte(0x80 | 0x01);
+      out.addByte(0);
+      out.addByte((300 >> 8) & 0xFF);
+      out.addByte(300 & 0xFF);
+      out.add(Uint8List(300));
+      out.addByte(0xFF);
+      out.addByte(0xF8);
+      out.add(Uint8List(200));
+      writeFlac('test.flac', out.toBytes());
+
+      final result =
+          await runMetaflac(['padding', 'sort', tmpFile('test.flac')]);
+      expect(result.exitCode, equals(0));
+
+      final blocks = await listBlocks(tmpFile('test.flac'));
+      final paddingBlocks =
+          blocks.where((b) => b['type'] == 'padding').toList();
+      expect(paddingBlocks.length, equals(1));
+      expect(paddingBlocks.single['payloadSize'], equals(608));
+      expect(blocks.last['type'], equals('padding'));
+      // Non-padding blocks keep their relative order.
+      expect(blocks[0]['type'], equals('streamInfo'));
+      expect(blocks[1]['type'], equals('vorbisComment'));
+    });
+  });
+
   group('blocks remove', () {
     Uint8List flacWithPictureAndPadding() => buildFlac(
           vorbisComment: VorbisCommentBlock(

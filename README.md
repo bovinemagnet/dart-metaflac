@@ -192,6 +192,8 @@ dart run bin/metaflac.dart <command> [options] <file.flac>
 | `picture export <file> --output=cover.jpg` | Extract a picture to disc |
 | `padding set <file> 4096` | Rewrite with a padding block of N bytes |
 | `padding remove <file>` | Strip all padding blocks |
+| `padding merge <file>` | Combine adjacent padding blocks into single blocks |
+| `padding sort <file>` | Move all padding to the end and merge into one block |
 
 ### Compatibility flags
 
@@ -206,6 +208,8 @@ dart run bin/metaflac.dart <command> [options] <file.flac>
 | `--import-tags-from=FILE` | `tags import --from=FILE` |
 | `--export-picture-to=FILE` | `picture export --output=FILE` |
 | `--import-picture-from=FILE` | `picture add --file=FILE` |
+| `--merge-padding` | `padding merge` |
+| `--sort-padding` | `padding sort` |
 
 ### Global options
 
