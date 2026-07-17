@@ -168,6 +168,7 @@ class FlacMetadataEditor {
       blocks: currentBlocks,
       audioDataOffset: _source.audioDataOffset,
       sourceMetadataRegionLength: _source.sourceMetadataRegionLength,
+      id3v2PrefixLength: _source.id3v2PrefixLength,
     );
   }
 

@@ -42,9 +42,15 @@ Future<FlacTransformResult> transformFlac(
   }
   final updated = editor.build();
   final audioData = input.sublist(doc.audioDataOffset);
-  final outBytes = FlacSerializer.serialize(updated.blocks, audioData);
+  final outBytes = FlacSerializer.serialize(
+    updated.blocks,
+    audioData,
+    id3v2Prefix: doc.id3v2PrefixLength == 0
+        ? null
+        : Uint8List.sublistView(input, 0, doc.id3v2PrefixLength),
+  );
   final originalSize = doc.sourceMetadataRegionLength;
-  final newSize = outBytes.length - audioData.length;
+  final newSize = outBytes.length - audioData.length - doc.id3v2PrefixLength;
   final plan = FlacTransformPlan(
     originalBlocks: doc.blocks,
     transformedBlocks: updated.blocks,
