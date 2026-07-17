@@ -101,8 +101,17 @@ class FlacParser {
       final block = _parseBlock(header, reader);
       blocks.add(block);
 
-      // Ensure reader consumed exactly payloadLength bytes.
+      // Ensure reader consumed exactly payloadLength bytes. Inner length
+      // fields that overrun the declared block length would silently
+      // consume the start of the next block (or audio), so reject them.
       final consumed = reader.offset - payloadStart;
+      if (consumed > header.payloadLength) {
+        throw MalformedMetadataException(
+          'Block content overruns its declared length: '
+          'typeCode=${header.typeCode}, '
+          'payloadLength=${header.payloadLength}, consumed=$consumed',
+        );
+      }
       if (consumed < header.payloadLength) {
         reader.skip(header.payloadLength - consumed);
       }
@@ -267,6 +276,15 @@ class FlacParser {
         entries.add(VorbisCommentEntry(
           key: commentStr.substring(0, eqIdx),
           value: commentStr.substring(eqIdx + 1),
+        ));
+      } else {
+        // Malformed comment with no '=' separator: preserve it verbatim
+        // (see VorbisCommentEntry.hasSeparator) so round-trips stay
+        // byte-exact instead of silently dropping data.
+        entries.add(VorbisCommentEntry(
+          key: commentStr,
+          value: '',
+          hasSeparator: false,
         ));
       }
     }

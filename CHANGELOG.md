@@ -25,6 +25,33 @@
   case-insensitively, but mixed-case keys written by other taggers
   (e.g. `AccurateRipResult=...`) now round-trip byte-for-byte
   instead of being rewritten in upper case.
+- Compat CLI failures no longer exit 0 (#28): `--export-picture-to`
+  with no picture present exits 1, and a malformed `--set-tag` or
+  `--set-tag-from-file` spec exits 2 before the file is touched. A
+  write invocation that produces no mutations leaves the file alone
+  instead of rewriting it unchanged.
+- `--import-tags-from=-` (and `tags import --from -`) reads from
+  stdin (#29), matching real metaflac and this tool's own export
+  side, so `export | import` pipelines work.
+- `--export-tags-to=-` no longer emits an extra trailing blank line,
+  so stdout output is byte-identical to file output (#30).
+- Vorbis comment entries without a `=` separator are preserved
+  verbatim on round-trip instead of being silently dropped; they are
+  exposed with `VorbisCommentEntry.hasSeparator == false` (#30).
+- The parser rejects blocks whose inner length fields overrun the
+  declared block length with `MalformedMetadataException` instead of
+  silently misparsing subsequent data (#30).
+- Public list fields (`FlacMetadataDocument.blocks`,
+  `FlacTransformPlan.originalBlocks`/`transformedBlocks`,
+  `VorbisComments.entries`, `SeekTableBlock.points`,
+  `CueSheetBlock.tracks`) are now unmodifiable, so in-place mutation
+  of an "immutable" document throws instead of corrupting it (#30).
+  As a consequence these constructors are no longer `const`.
+- Corrected the `WriteMode.inPlaceIfPossible` doc (it throws
+  `WriteConflictException` when metadata does not fit, rather than
+  falling back), fixed the non-compiling `lib/io.dart` usage example,
+  and removed the dead `PaddingStrategy.defaultPadding` constant
+  (#30).
 
 ## 0.0.2
 

@@ -4,13 +4,22 @@
 /// [canonicalKey] for case-normalised comparisons.
 final class VorbisCommentEntry {
   /// Create a [VorbisCommentEntry] with the given [key] and [value].
-  const VorbisCommentEntry({required this.key, required this.value});
+  const VorbisCommentEntry(
+      {required this.key, required this.value, this.hasSeparator = true});
 
   /// The field name as originally stored (case preserved).
   final String key;
 
   /// The field value as a UTF-8 string.
   final String value;
+
+  /// Whether the stored comment contained a `=` separator.
+  ///
+  /// Comments without a separator are technically malformed but appear in
+  /// the wild; the parser preserves them ([key] holds the whole comment,
+  /// [value] is empty) and serialisation writes them back without adding
+  /// a `=`, keeping round-trips byte-exact.
+  final bool hasSeparator;
 
   /// The upper-case form of [key], used for case-insensitive matching.
   String get canonicalKey => key.toUpperCase();
@@ -31,14 +40,18 @@ final class VorbisCommentEntry {
 /// - [VorbisCommentEntry] for individual entries.
 final class VorbisComments {
   /// Create a [VorbisComments] with the given [vendorString] and [entries].
-  const VorbisComments({required this.vendorString, required this.entries});
+  VorbisComments(
+      {required this.vendorString, required List<VorbisCommentEntry> entries})
+      : entries = List.unmodifiable(entries);
 
   /// The encoder or software vendor identification string.
   final String vendorString;
 
-  /// The ordered list of comment entries.
+  /// The ordered list of comment entries (unmodifiable).
   ///
   /// Duplicate keys are permitted and their relative order is significant.
+  /// Use the mutation methods ([set], [add], [removeKey], …) to obtain a
+  /// changed instance.
   final List<VorbisCommentEntry> entries;
 
   /// Return all values associated with [key] (case-insensitive).

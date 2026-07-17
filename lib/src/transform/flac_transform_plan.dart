@@ -7,19 +7,20 @@ import '../model/flac_metadata_block.dart';
 /// determine whether the file needs a full rewrite.
 final class FlacTransformPlan {
   /// Create a transform plan.
-  const FlacTransformPlan({
-    required this.originalBlocks,
-    required this.transformedBlocks,
+  FlacTransformPlan({
+    required List<FlacMetadataBlock> originalBlocks,
+    required List<FlacMetadataBlock> transformedBlocks,
     required this.originalMetadataRegionSize,
     required this.transformedMetadataRegionSize,
     required this.fitsExistingRegion,
     required this.requiresFullRewrite,
-  });
+  })  : originalBlocks = List.unmodifiable(originalBlocks),
+        transformedBlocks = List.unmodifiable(transformedBlocks);
 
-  /// The metadata blocks present before the transform.
+  /// The metadata blocks present before the transform (unmodifiable).
   final List<FlacMetadataBlock> originalBlocks;
 
-  /// The metadata blocks produced by the transform.
+  /// The metadata blocks produced by the transform (unmodifiable).
   final List<FlacMetadataBlock> transformedBlocks;
 
   /// Total size (in bytes) of the original metadata region, including

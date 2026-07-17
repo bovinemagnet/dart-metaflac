@@ -355,8 +355,10 @@ Future<int> _processFile({
           }
         }
         if (exportTagsTo == '-') {
-          _write(lines.toString().trimRight(), quiet);
-          if (!quiet) stdout.writeln();
+          // No extra trailing newline: stdout output must match the file
+          // output byte-for-byte so export/import pipelines round-trip.
+          final text = lines.toString();
+          if (text.isNotEmpty) _write(text.trimRight(), quiet);
         } else {
           File(exportTagsTo).writeAsStringSync(lines.toString());
         }
@@ -366,11 +368,11 @@ Future<int> _processFile({
 
     final exportPictureTo = results['export-picture-to'] as String?;
     if (exportPictureTo != null) {
-      if (doc.pictures.isNotEmpty) {
-        File(exportPictureTo).writeAsBytesSync(doc.pictures.first.data);
-      } else {
+      if (doc.pictures.isEmpty) {
         stderr.writeln('${prefix}No picture found.');
+        return _exitGeneralError;
       }
+      File(exportPictureTo).writeAsBytesSync(doc.pictures.first.data);
       return _exitSuccess;
     }
 
@@ -443,8 +445,10 @@ Future<int> _processFile({
     for (final tag in setTags) {
       final eqIdx = tag.indexOf('=');
       if (eqIdx < 0) {
+        // Fail before any file is touched so scripts can detect the
+        // mistake, matching the modern `tags set` interface (exit 2).
         stderr.writeln('Invalid tag format (expected KEY=VALUE): $tag');
-        continue;
+        return _exitInvalidArgs;
       }
       final key = tag.substring(0, eqIdx).toUpperCase();
       final value = tag.substring(eqIdx + 1);
@@ -456,7 +460,7 @@ Future<int> _processFile({
       if (eqIdx < 0) {
         stderr.writeln(
             'Invalid --set-tag-from-file format (expected KEY=FILE): $spec');
-        continue;
+        return _exitInvalidArgs;
       }
       final key = spec.substring(0, eqIdx).toUpperCase();
       final path = spec.substring(eqIdx + 1);
@@ -465,7 +469,13 @@ Future<int> _processFile({
     }
 
     if (importTagsFrom != null) {
-      final lines = File(importTagsFrom).readAsLinesSync();
+      // `-` reads from stdin, matching real metaflac and the export side.
+      final lines = importTagsFrom == '-'
+          ? await stdin
+              .transform(utf8.decoder)
+              .transform(const LineSplitter())
+              .toList()
+          : File(importTagsFrom).readAsLinesSync();
       for (final line in lines) {
         if (line.trim().isEmpty) continue;
         final eqIdx = line.indexOf('=');
@@ -605,6 +615,12 @@ Future<int> _processFile({
           quiet,
         );
       }
+      return _exitSuccess;
+    }
+
+    // Nothing to apply (e.g. an import file with no usable lines):
+    // leave the file untouched rather than rewriting it unchanged.
+    if (mutations.isEmpty) {
       return _exitSuccess;
     }
 

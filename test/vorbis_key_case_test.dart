@@ -15,7 +15,7 @@ import 'package:test/test.dart';
 import 'test_fixtures.dart';
 
 VorbisCommentBlock _mixedCaseComment() => VorbisCommentBlock(
-      comments: const VorbisComments(
+      comments: VorbisComments(
         vendorString: 'test',
         entries: [
           VorbisCommentEntry(key: 'AccurateRipResult', value: 'AccurateRip'),

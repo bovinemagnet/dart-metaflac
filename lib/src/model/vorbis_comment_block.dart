@@ -31,7 +31,9 @@ final class VorbisCommentBlock extends FlacMetadataBlock {
     final vendorBytes = utf8.encode(comments.vendorString);
     final commentPairs = <List<int>>[];
     for (final entry in comments.entries) {
-      commentPairs.add(utf8.encode('${entry.key}=${entry.value}'));
+      // Entries parsed without a '=' separator are written back verbatim.
+      commentPairs.add(utf8.encode(
+          entry.hasSeparator ? '${entry.key}=${entry.value}' : entry.key));
     }
     var totalSize = 4 + vendorBytes.length + 4;
     for (final cp in commentPairs) {

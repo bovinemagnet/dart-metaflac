@@ -35,18 +35,19 @@ final class FlacMetadataDocument {
   /// Create a [FlacMetadataDocument] with the given components.
   ///
   /// Prefer [readFromBytes] or [readFromStream] for parsing real FLAC data.
-  const FlacMetadataDocument({
-    required this.blocks,
+  FlacMetadataDocument({
+    required List<FlacMetadataBlock> blocks,
     required this.audioDataOffset,
     required this.sourceMetadataRegionLength,
     this.sourceBytes,
     this.id3v2PrefixLength = 0,
-  });
+  }) : blocks = List.unmodifiable(blocks);
 
   /// The ordered list of metadata blocks in this document.
   ///
   /// The first block is always a [StreamInfoBlock] as required by the FLAC
-  /// specification. Subsequent blocks may appear in any order.
+  /// specification. Subsequent blocks may appear in any order. The list is
+  /// unmodifiable; use [edit] to produce a changed document.
   final List<FlacMetadataBlock> blocks;
 
   /// The byte offset at which audio frame data begins in the source file.
