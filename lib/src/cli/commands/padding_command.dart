@@ -11,6 +11,8 @@ class PaddingCommand extends Command<int> {
   PaddingCommand() {
     addSubcommand(PaddingSetCommand());
     addSubcommand(PaddingRemoveCommand());
+    addSubcommand(PaddingMergeCommand());
+    addSubcommand(PaddingSortCommand());
   }
 
   @override
@@ -134,5 +136,53 @@ class PaddingRemoveCommand extends BaseFlacCommand {
     final filePath = rest.first;
 
     return _applyMutations(this, filePath, [const SetPadding(0)]);
+  }
+}
+
+// ─── Merge ──────────────────────────────────────────────────────────────────
+
+/// Merges adjacent padding blocks into single blocks.
+class PaddingMergeCommand extends BaseFlacCommand {
+  @override
+  String get name => 'merge';
+
+  @override
+  String get description => 'Combine adjacent padding blocks into single '
+      'blocks';
+
+  /// Applies a [MergeAdjacentPadding] mutation.
+  @override
+  Future<int> run() async {
+    final rest = argResults!.rest;
+    if (rest.isEmpty) {
+      throw UsageException('No file specified.', usage);
+    }
+    final filePath = rest.first;
+
+    return _applyMutations(this, filePath, [const MergeAdjacentPadding()]);
+  }
+}
+
+// ─── Sort ───────────────────────────────────────────────────────────────────
+
+/// Moves all padding blocks to the end and merges them into one block.
+class PaddingSortCommand extends BaseFlacCommand {
+  @override
+  String get name => 'sort';
+
+  @override
+  String get description => 'Move all padding blocks to the end and merge '
+      'into one block';
+
+  /// Applies a [SortPadding] mutation.
+  @override
+  Future<int> run() async {
+    final rest = argResults!.rest;
+    if (rest.isEmpty) {
+      throw UsageException('No file specified.', usage);
+    }
+    final filePath = rest.first;
+
+    return _applyMutations(this, filePath, [const SortPadding()]);
   }
 }

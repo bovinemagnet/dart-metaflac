@@ -540,6 +540,68 @@ void main() {
       expect(out, isNot(contains('streamInfo')));
     });
   });
+
+  group('Tier 4: padding merge and sort legacy flags', () {
+    // Fixture with padding scattered through the block list:
+    // STREAMINFO, PADDING(100), PADDING(200), VORBIS_COMMENT, PADDING(300).
+    String buildScatteredPaddingFixture() {
+      final base = buildFlac(paddingSize: -1); // fLaC + STREAMINFO + audio
+      const siEnd = 4 + 4 + 34;
+      final head = Uint8List.fromList(base.sublist(0, siEnd));
+      head[4] &= 0x7F; // clear the is-last bit on the STREAMINFO header
+      final vcData = _vc([('TITLE', 'Tier 4')]).toPayloadBytes();
+      final out = BytesBuilder();
+      out.add(head);
+      for (final size in [100, 200]) {
+        out.addByte(0x01);
+        out.addByte((size >> 16) & 0xFF);
+        out.addByte((size >> 8) & 0xFF);
+        out.addByte(size & 0xFF);
+        out.add(Uint8List(size));
+      }
+      out.addByte(0x04);
+      out.addByte((vcData.length >> 16) & 0xFF);
+      out.addByte((vcData.length >> 8) & 0xFF);
+      out.addByte(vcData.length & 0xFF);
+      out.add(vcData);
+      out.addByte(0x80 | 0x01);
+      out.addByte((300 >> 16) & 0xFF);
+      out.addByte((300 >> 8) & 0xFF);
+      out.addByte(300 & 0xFF);
+      out.add(Uint8List(300));
+      out.add(base.sublist(siEnd)); // fake audio
+      final path = tmpFile('scattered_padding.flac');
+      File(path).writeAsBytesSync(out.toBytes());
+      return path;
+    }
+
+    test('--merge-padding coalesces adjacent padding runs', () async {
+      final path = buildScatteredPaddingFixture();
+      final r = await runCli(['--merge-padding', path]);
+      expect(r.exitCode, 0);
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
+      final padding = doc.blocks.whereType<PaddingBlock>().toList();
+      // Adjacent run merges (absorbed header becomes padding); the
+      // padding after VORBIS_COMMENT stays separate.
+      expect(padding.length, 2);
+      expect(padding[0].size, 100 + 4 + 200);
+      expect(padding[1].size, 300);
+    });
+
+    test('--sort-padding moves all padding to the end and merges', () async {
+      final path = buildScatteredPaddingFixture();
+      final r = await runCli(['--sort-padding', path]);
+      expect(r.exitCode, 0);
+      final doc =
+          FlacMetadataDocument.readFromBytes(File(path).readAsBytesSync());
+      final padding = doc.blocks.whereType<PaddingBlock>().toList();
+      expect(padding.length, 1);
+      expect(padding.single.size, 100 + 4 + 200 + 4 + 300);
+      expect(doc.blocks.last, isA<PaddingBlock>());
+      expect(doc.vorbisComment, isNotNull);
+    });
+  });
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

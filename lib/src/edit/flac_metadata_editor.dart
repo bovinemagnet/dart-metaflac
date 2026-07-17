@@ -119,6 +119,20 @@ class FlacMetadataEditor {
   /// if [size] is zero).
   void setPadding(int size) => _mutations.add(SetPadding(size));
 
+  /// Merge runs of adjacent padding blocks into single blocks.
+  ///
+  /// Enqueues a [MergeAdjacentPadding] mutation. Each absorbed block's
+  /// 4-byte header becomes padding, so the total metadata size is
+  /// unchanged.
+  void mergeAdjacentPadding() => _mutations.add(const MergeAdjacentPadding());
+
+  /// Move all padding blocks to the end of the block list and merge them
+  /// into a single block.
+  ///
+  /// Enqueues a [SortPadding] mutation. Each absorbed block's 4-byte
+  /// header becomes padding, so the total metadata size is unchanged.
+  void sortPadding() => _mutations.add(const SortPadding());
+
   /// Remove all blocks whose type is in [types].
   ///
   /// Enqueues a [RemoveBlocksByType] mutation. STREAMINFO cannot be
@@ -213,6 +227,15 @@ class FlacMetadataEditor {
         final withoutPadding = blocks.where((b) => b is! PaddingBlock).toList();
         if (m.size > 0) return [...withoutPadding, PaddingBlock(m.size)];
         return withoutPadding;
+      case MergeAdjacentPadding _:
+        return _mergeAdjacentPadding(blocks);
+      case SortPadding _:
+        final paddingBlocks = blocks.whereType<PaddingBlock>().toList();
+        if (paddingBlocks.isEmpty) return blocks;
+        return _mergeAdjacentPadding([
+          ...blocks.where((b) => b is! PaddingBlock),
+          ...paddingBlocks,
+        ]);
       case RemoveBlocksByType m:
         if (m.types.contains(FlacBlockType.streamInfo)) {
           throw FlacMetadataException(
@@ -261,6 +284,28 @@ class FlacMetadataEditor {
         }
         return [...blocks, raw];
     }
+  }
+
+  /// Coalesce each run of adjacent [PaddingBlock]s into a single block.
+  ///
+  /// Each absorbed block's 4-byte header becomes padding (mirroring
+  /// libFLAC's `FLAC__metadata_chain_merge_padding`), so the total
+  /// metadata region size is unchanged.
+  List<FlacMetadataBlock> _mergeAdjacentPadding(
+      List<FlacMetadataBlock> blocks) {
+    const headerLength = 4;
+    final result = <FlacMetadataBlock>[];
+    for (final block in blocks) {
+      if (block is PaddingBlock &&
+          result.isNotEmpty &&
+          result.last is PaddingBlock) {
+        final previous = result.removeLast() as PaddingBlock;
+        result.add(PaddingBlock(previous.size + headerLength + block.size));
+      } else {
+        result.add(block);
+      }
+    }
+    return result;
   }
 
   List<FlacMetadataBlock> _updateVorbisComments(

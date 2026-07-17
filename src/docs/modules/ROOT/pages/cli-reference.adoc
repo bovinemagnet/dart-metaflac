@@ -154,6 +154,24 @@ Remove all padding blocks.
 dart run bin/metaflac.dart padding remove song.flac
 ----
 
+=== padding merge
+
+Combine adjacent PADDING blocks into single blocks. Each absorbed block's 4-byte header becomes padding, so the total metadata size is unchanged.
+
+[source,bash]
+----
+dart run bin/metaflac.dart padding merge song.flac
+----
+
+=== padding sort
+
+Move all PADDING blocks to the end of the metadata and merge them into one block.
+
+[source,bash]
+----
+dart run bin/metaflac.dart padding sort song.flac
+----
+
 == Compatibility Flags
 
 For users migrating from the reference `metaflac` tool, legacy flags are supported.
@@ -256,6 +274,19 @@ Each flag exits after producing its output and does not modify the file.
 
 | `--import-picture-from=FILE`
 | Import an image file as an embedded picture block; equivalent to `picture add --file=FILE`
+|===
+
+=== Padding Operations
+
+[cols="3,4", options="header"]
+|===
+| Legacy Flag | Description
+
+| `--merge-padding`
+| Combine adjacent PADDING blocks into single blocks; equivalent to `padding merge`
+
+| `--sort-padding`
+| Move all PADDING blocks to the end and merge into one block; equivalent to `padding sort`
 |===
 
 == Global Options
